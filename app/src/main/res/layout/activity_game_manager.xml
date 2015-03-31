@@ -1,0 +1,69 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.disc.teslademo.NewsFeedFragment"
+    android:id="@+id/gameManager"
+    android:weightSum="1">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:layout_gravity="center_horizontal"
+            android:textColor="#FFFD5720"
+            android:textSize="23sp"
+            android:text="@string/gameManagerTitle"
+            android:textAlignment="center" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Send OK"
+            android:id="@+id/send"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:id="@+id/pairedDeviceText" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:layout_width="189dp"
+            android:layout_height="44dp"
+            android:id="@+id/courseName"
+            android:textSize="15dp" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="49dp"
+            android:id="@+id/gameInfoText" />
+    </LinearLayout>
+
+    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/gameMap"
+        android:layout_width="fill_parent"
+        android:layout_height="227dp"
+        android:name="com.google.android.gms.maps.MapFragment" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:id="@+id/textView"
+        android:layout_weight="1.28" />
+
+</LinearLayout>

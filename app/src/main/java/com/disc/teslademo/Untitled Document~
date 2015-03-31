@@ -1,0 +1,652 @@
+package com.disc.teslademo;
+
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v4.app.FragmentActivity;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.StringTokenizer;
+
+import app.akexorcist.bluetotohspp.library.BluetoothSPP;
+import app.akexorcist.bluetotohspp.library.BluetoothState;
+
+
+public class GameManager extends FragmentActivity
+    implements GoogleApiClient.ConnectionCallbacks,GoogleApiClient.OnConnectionFailedListener,
+        LocationListener, OnMapReadyCallback {
+
+    private static final String TAG = "Game Manager";
+    static final String tPad = "Tee-Pad", basket = "Basket";
+
+    // Keys for storing activity state in the Bundle.
+    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
+    protected final static String LOCATION_KEY = "location-key";
+    protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
+
+    // BT Variables
+//    BluetoothSPP bt;
+    BluetoothAdapter mBluetoothAdapter;
+    Context context = this;
+    int numberOfTries = 0;
+//    int MaxNumberOfTries = 10;
+
+    // Navigation Variables
+    MenuItem updateBasket, updateTeepad, exitGame;
+
+    // Map Variables
+    protected GoogleApiClient mGoogleApiClient;
+    private LocationRequest mLocationRequest;
+    private Location lastLocation;
+    private TextView gameInfoText, courseName;
+    private Boolean mRequestingLocationUpdates;
+    private String mLastUpdateTime;
+    private MapFragment gameMap;
+    ArrayList<LatLng> points = new ArrayList<>();
+    TrajectoryPlotter trajectory = new TrajectoryPlotter();
+    private PolylineOptions polylineOptions;
+    private boolean haveSentConfirmation = false, basketConfirmation = false;
+
+    // Gameplay Variables
+    public int currentBasket;
+    private double lastDataReceived = 0;
+//    private int currentPar;
+
+    // When first called
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Set the Game Play fragments as the activity layouts
+        setContentView(R.layout.activity_game_manager);
+
+        // ************ Enable and setup Bluetooth
+//        bt = new BluetoothSPP(this);
+        setupBluetooth();
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            // Device does not support Bluetooth
+            showBluetoothWarning();
+        }
+
+        // ***************************** Setup Location Listener
+        LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            AlertDialog.Builder locationAlertBuilder = new AlertDialog.Builder(this);
+            locationAlertBuilder.setTitle("Location Not Enabled")
+                    .setMessage("Location Services are required for this application." +
+                            "Please check your settings and try again.")
+                    .setPositiveButton("Return to News Feed",new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog,int id) {
+                            // if this button is clicked, close
+                            // current activity
+                            numberOfTries = 0;
+                            finish();
+                        }
+                    })
+                    .setNegativeButton("Continue w/o Location",new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog,int id) {
+                            // if this button is clicked, close
+                            // current activity
+                            dialog.dismiss();
+                        }
+                    });
+            AlertDialog locationAlert = locationAlertBuilder.create();
+            locationAlert.show();
+        }
+        else
+
+        updateValuesFromBundle(savedInstanceState);
+
+        // Setup map
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        gameMap = (MapFragment) getFragmentManager()
+                .findFragmentById(R.id.gameMap);
+        gameMap.getMapAsync(this);
+
+        currentBasket = 1;
+        gameInfoText = (TextView)findViewById(R.id.gameInfoText);
+        gameInfoText.setText("Current Basket: " + currentBasket);
+        courseName = (TextView)findViewById(R.id.courseName);
+        courseName.setText(MainActivity.course.getCourseName());
+
+        // ******************************** Trajectory Setup
+        // Instantiating the class PolylineOptions to plot polyline in the map
+        polylineOptions = new PolylineOptions();
+
+        // Setting the color of the polyline
+        polylineOptions.color(Color.RED);
+
+        // Setting the width of the polyline
+        polylineOptions.width(7);
+    }
+
+    @Override
+    public void onMapReady(GoogleMap map) {
+        map.setMyLocationEnabled(true);
+
+        // Move camera to current phone location
+        if ((lastLocation != null)) {
+            LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 10));
+        }
+        else {
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(MainActivity.course.getLat(), MainActivity.course.getLong()), 18f));
+        }
+
+        updateMapDrawings();
+    }
+
+    private void updateMapDrawings() {
+        // clear old markers
+        gameMap.getMap().clear();
+
+        gameMap.getMap().setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+
+        //**************** Add basket/tee-pad markers
+        gameMap.getMap().addMarker(new MarkerOptions()
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.basket_icon)) // basket
+                .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
+                .position(new LatLng(MainActivity.course.getBLat(), MainActivity.course.getBLong())));
+
+        gameMap.getMap().addMarker(new MarkerOptions()
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.number_1)) // basket
+                .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
+                .position(new LatLng(MainActivity.course.getLat(), MainActivity.course.getLong())));
+    }
+
+    private void updateValuesFromBundle(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            // Update the value of mRequestingLocationUpdates from the Bundle, and
+            // make sure that the Start Updates and Stop Updates buttons are
+            // correctly enabled or disabled.
+            if (savedInstanceState.keySet().contains(REQUESTING_LOCATION_UPDATES_KEY)) {
+                mRequestingLocationUpdates = savedInstanceState.getBoolean(
+                        REQUESTING_LOCATION_UPDATES_KEY);
+            }
+
+            // Update the value of mCurrentLocation from the Bundle and update the
+            // UI to show the correct latitude and longitude.
+            if (savedInstanceState.keySet().contains(LOCATION_KEY)) {
+                // Since LOCATION_KEY was found in the Bundle, we can be sure that
+                // mCurrentLocationis not null.
+                lastLocation = savedInstanceState.getParcelable(LOCATION_KEY);
+            }
+
+            // Update the value of mLastUpdateTime from the Bundle and update the UI.
+            if (savedInstanceState.keySet().contains(LAST_UPDATED_TIME_STRING_KEY)) {
+                mLastUpdateTime = savedInstanceState.getString(
+                        LAST_UPDATED_TIME_STRING_KEY);
+            }
+            updateUI();
+        }
+    }
+
+    public void onStart() {
+        super.onStart();
+        if(!bt.isBluetoothEnabled()) {
+            bt.enable();
+        } else {
+            if(!bt.isServiceAvailable()) {
+                bt.setupService();
+                bt.startService(BluetoothState.DEVICE_OTHER);
+                bt.autoConnect(getString(R.string.deviceName));
+            }
+        }
+        // Connect the client.
+        mGoogleApiClient.connect();
+    }
+
+    // **************************     Setup Menu Options
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // only add the menu when the menu is empty
+//        super.onCreateOptionsMenu(menu);
+        if (menu.size() == 0) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.menu_game_manager, menu);
+            updateBasket = menu.add("Update Current Basket");
+            updateTeepad = menu.add("Update Current Tee-pad");
+            exitGame = menu.add("Exit Game");
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.equals(updateBasket)) {    // Update basket
+            updateCourseData(basket);
+        } else if (item.equals(updateTeepad)) { // update tee-pad
+            updateCourseData(tPad);
+        } else {    // exit game
+            AlertDialog.Builder exitDialogBuilder = new AlertDialog.Builder(this);
+            exitDialogBuilder.setTitle("Exit Game");
+            exitDialogBuilder.setMessage("Are you sure you want to exit? If you leave" +
+                            "before a full game is over, your data will not be saved");
+            exitDialogBuilder.setPositiveButton("Exit", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    // if this button is clicked, close
+                    // current activity
+                    numberOfTries = 0;
+                    finish();
+                }
+            });
+            exitDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // if this button is clicked, close
+                    // current activity
+                    dialog.dismiss();
+                }
+            });
+
+            AlertDialog exitDialog = exitDialogBuilder.create();
+            exitDialog.show();
+        }
+        return true;
+    }
+
+    private void updateCourseData(final String target) {
+        //
+        AlertDialog.Builder updateAlertBuilder = new AlertDialog.Builder(this);
+
+        // set title
+        updateAlertBuilder.setTitle("Update " + target);
+
+        // set dialog message
+        updateAlertBuilder.setMessage("You are attempting to update the current "
+                + target + ". Please place your phone as close to the center of the "
+                + target + "as possible, then click UPDATE. Otherwise, click CANCEL");
+        updateAlertBuilder.setCancelable(false);
+        updateAlertBuilder.setPositiveButton("UPDATE",new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,int id) {
+                // if this button is clicked, close
+                // current activity
+                if (target.equals(tPad)) {  // Trying to update current teepad
+                    //  Update it with current location
+
+                    if (lastLocation != null) {
+                        MainActivity.course.setLat(lastLocation.getLatitude());
+                        MainActivity.course.setLong(lastLocation.getLongitude());
+                    }
+
+                    //  Upload to the server
+                    new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_COURSE);
+
+                }
+                else {  // Trying to update current basket
+                    if (lastLocation != null) {
+                    MainActivity.course.setBLat(lastLocation.getLatitude());
+                    MainActivity.course.setBLong(lastLocation.getLongitude());
+                    }
+                 //  Upload to the server
+                    new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_COURSE);
+                    }
+                updateMapDrawings();
+                     }
+        });
+        updateAlertBuilder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // if this button is clicked, just close
+                // the dialog box and do nothing
+                dialog.cancel();
+            }
+        });
+        // create alert dialog
+        AlertDialog updateAlert =  updateAlertBuilder.create();
+
+        // show it
+        updateAlert.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        bt.stopAutoConnect();
+        bt.stopService();
+    }
+
+    @Override
+    protected void onStop() {
+        // Disconnecting the client invalidates it.
+        mGoogleApiClient.disconnect();
+        super.onStop();
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+        mLocationRequest = new LocationRequest();
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setInterval(1000); // Update location every second
+        mLocationRequest.setFastestInterval(5000);
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.i(TAG, "GoogleApiClient connection has been suspend");
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.i(TAG, "GoogleApiClient connection has failed");
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        lastLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        updateUI();
+    }
+
+    private void updateUI() {
+        // TODO:
+    }
+
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        savedInstanceState.putBoolean(REQUESTING_LOCATION_UPDATES_KEY,
+                mRequestingLocationUpdates);
+        savedInstanceState.putParcelable(LOCATION_KEY, lastLocation);
+        savedInstanceState.putString(LAST_UPDATED_TIME_STRING_KEY, mLastUpdateTime);
+        super.onSaveInstanceState(savedInstanceState);
+    }
+
+
+    // TODO: IF BT ISN'T WORKING, CHECK THAT DEVICE NAME IS CORRECT IN RES/VALUES/STRINGS
+    private void setupBluetooth() {
+        // Check Bluetooth State: supported and enabled
+        Log.i(TAG, "Starting up Bluetooth");
+        
+        // Check is Bluetooth is enabled
+        if (!mBluetoothAdapter.isEnabled()) {
+            
+//        CheckBlueToothState(); // Will return to Main Activity if unable to set up Bluetooth
+//        if (!bt.isBluetoothAvailable()) {
+//            Toast.makeText(context
+//                    , "Bluetooth is not available"
+//                    , Toast.LENGTH_SHORT).show();
+//        }
+//
+//        bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
+//            public void onDeviceConnected(String name, String address) {
+//                Toast.makeText(context
+//                        , "Connected to " + name
+//                        , Toast.LENGTH_SHORT).show();
+//                numberOfTries = 0;  // Reset auto-connect flag
+//                Log.i("Connected", "Device is connected");
+//            }
+//
+//            public void onDeviceDisconnected() {
+//                Toast.makeText(context
+//                        , "Connection lost"
+//                        , Toast.LENGTH_SHORT).show();
+//            }
+//
+//            public void onDeviceConnectionFailed() {
+//                Log.i("Check", "Unable to connect");
+//                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+//
+//                // set title
+//                alertDialogBuilder.setTitle("Unable to Connect");
+//
+//                // set dialog message
+//                alertDialogBuilder.setMessage("Unable to connect to Bluetooth. Recording game sessions" +
+//                        "requires a Bluetooth connection. Please try again.");
+//                alertDialogBuilder.setCancelable(false);
+//                alertDialogBuilder.setPositiveButton("Return to News Feed",new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog,int id) {
+//                        // if this button is clicked, close
+//                        // current activity
+//                        finish();
+//                    }
+//                });
+//                alertDialogBuilder.setNegativeButton("Continue w/o BT", new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog, int id) {
+//                        // if this button is clicked, just close
+//                        // the dialog box and do nothing
+//                        dialog.cancel();
+//                    }
+//                });
+//                // create alert dialog
+//                AlertDialog alertDialog =  alertDialogBuilder.create();
+//
+//                // show it
+//                alertDialog.show();
+//            }
+//        });
+
+//        bt.setAutoConnectionListener(new BluetoothSPP.AutoConnectionListener() {
+//            public void onNewConnection(String name, String address) {
+//                Toast.makeText(context, "New Connection - " + name, Toast.LENGTH_SHORT).show();
+//                Toast.makeText(context, "Number of Tries - " + numberOfTries, Toast.LENGTH_SHORT).show();
+//                numberOfTries++;
+//                // TODO: Below is commented out AlertDialog for leaving gameplay if bluetooth cannot connect
+//                if (numberOfTries >= MaxNumberOfTries) {
+//                    // Reached max numbers of attempts desired, return to news feed
+//                    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+//
+//                    // set title
+//                    alertDialogBuilder.setTitle("Unable to Connect");
+//
+//                    // set dialog message
+//                    alertDialogBuilder.setMessage("Unable to connect to Bluetooth. Recording game sessions" +
+//                            "requires a Bluetooth connection. Please try again.");
+//                    alertDialogBuilder.setCancelable(false);
+//                    alertDialogBuilder.setPositiveButton("Return to News Feed",new DialogInterface.OnClickListener() {
+//                        public void onClick(DialogInterface dialog,int id) {
+//                            // if this button is clicked, close
+//                            // current activity
+//                            numberOfTries = 0;
+//                            bt.stopAutoConnect();
+//                            bt.stopService();
+//                            finish();
+//                        }
+//                    });
+//                    alertDialogBuilder.setNegativeButton("Continue w/o BT",new DialogInterface.OnClickListener() {
+//                        public void onClick(DialogInterface dialog,int id) {
+//                            // if this button is clicked, just close
+//                            // the dialog box and do nothing
+//                            bt.stopAutoConnect();
+//                            bt.stopService();
+//                            numberOfTries = 0;
+//                        }
+//                    });
+//                    // create alert dialog
+//                    AlertDialog alertDialog =  alertDialogBuilder.create();
+//
+//                    // show it
+//                    alertDialog.show();
+//
+//                }
+            }
+
+
+
+
+//            public void onAutoConnectionStarted() {
+//                Log.i("Check", "Auto menu_connection started");
+//                Toast.makeText(context, "Auto-Connection Started", Toast.LENGTH_LONG).show();
+//            }
+//        });
+
+        bt.setOnDataReceivedListener(new BluetoothSPP.OnDataReceivedListener() {
+            public void onDataReceived(byte[] data, String message) {
+                // TODO: What to do when phone receives bluetooth communication
+                Log.d("Received String:", message);
+                // Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                switch (message) {
+                    case "Ready":
+                        // Disc is checking if connection is ready
+                        if (!haveSentConfirmation) {  // Only send once in between flights
+                            bt.send(message, true);
+                            haveSentConfirmation = true;
+                            Toast.makeText(context, "Ready for new points", Toast.LENGTH_SHORT).show();
+                        }
+
+                        break;
+                    case "EOH":
+
+                        // Disc is signaling end of basket
+                        if (!basketConfirmation) {
+                            bt.send(message, true);
+                            currentBasket++;
+                            basketConfirmation = true;
+                            Toast.makeText(context, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
+                            gameInfoText.setText("Current basket: " + currentBasket);
+                        }
+                        break;
+                    default:
+                        StringTokenizer st = new StringTokenizer(message, ",");
+                        int mLength = st.countTokens();
+                        if (mLength > 2) { // Filter out spurious BT messages, expected trajectories will be of long length
+                            double[] GPSinput = new double[mLength];
+                            String temp;
+                            int j = 0;
+                            while (st.hasMoreTokens()) {
+                                temp = st.nextToken();
+                                GPSinput[j] = Double.parseDouble(temp);
+                                j++;
+                            }
+                            if (GPSinput[0] != lastDataReceived) {  // Don't plot duplicate points
+
+                                Toast.makeText(context, "Adding new points", Toast.LENGTH_SHORT).show();
+
+                                // Initialize constants and flight data
+                                GPSinput = trajectory.filter(GPSinput);
+                                trajectory.initData(GPSinput);
+                                points = trajectory.mapTrajectory();
+
+                                // Setting points of polyline
+                                polylineOptions.addAll(points);
+
+                                // Adding the polyline to the map
+                                gameMap.getMap().addPolyline(polylineOptions);
+
+                                //                        LatLng ZOOM = new LatLng((GPSinput[mLength-2]+GPSinput[0])/2,(GPSinput[mLength-1]+GPSinput[1])/2);
+                                //                        gameMap.getMap().animateCamera(CameraUpdateFactory.newLatLngZoom(ZOOM, 11));
+
+                                // Polled GPS location from disc
+                                for (int i = 0; i < GPSinput.length - 1; i = i + 2) {
+                                    gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSinput[i], GPSinput[i + 1])));
+                                }
+
+                                haveSentConfirmation = false;   // prepare for next Ready signal
+                                basketConfirmation = false;     // prepare for next EOH signal
+                                lastDataReceived = GPSinput[0]; // flag to see if next GPS points received are duplicates
+                            }
+                        }
+                        break;
+                }
+            }
+        });
+    }
+
+    private void showBluetoothWarning() {
+        Log.i("Check", "Unable to connect");
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+
+        // set title
+        alertDialogBuilder.setTitle("Unable to Connect");
+
+        // set dialog message
+        alertDialogBuilder.setMessage("Unable to connect to Bluetooth. Recording game sessions" +
+                "requires a Bluetooth connection. Please try again.");
+        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveButton("Return to News Feed", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // if this button is clicked, close
+                // current activity
+                finish();
+            }
+        });
+        alertDialogBuilder.setNegativeButton("Continue w/o BT", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // if this button is clicked, just close
+                // the dialog box and do nothing
+                dialog.cancel();
+            }
+        });
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
+    }
+
+    private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String>
+    {
+        @Override
+        protected String doInBackground(DynamoDBManagerType...types) {
+            Log.d("DoINBackGround","On doInBackground...");
+
+            AmazonDynamoDBClient clientManager =  new AmazonDynamoDBClient(MainActivity.credentials);
+            DynamoDBMapper mapper = new DynamoDBMapper(clientManager);
+
+            if (types[0] == DynamoDBManagerType.GET_USER1) {
+                MainActivity.user1 = mapper.load(MapperUser.class, getString(R.string.user1_ID));
+            }
+            else if (types[0] == DynamoDBManagerType.GET_USER2) {
+                MainActivity.user2 = mapper.load(MapperUser.class, getString(R.string.user2_ID));
+            }
+            else if (types[0] == DynamoDBManagerType.GET_COURSE) {
+                MainActivity.course = mapper.load(MapperCourse.class, getString(R.string.courseID));
+            }
+            else if (types[0] == DynamoDBManagerType.SAVE_COURSE) {
+                mapper.save(MainActivity.course);
+            }
+            else if (types[0] == DynamoDBManagerType.SAVE_USER1) {
+                mapper.save(MainActivity.user1);
+            }
+            else if (types[0] == DynamoDBManagerType.SAVE_USER2) {
+                mapper.save(MainActivity.user2);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+        }
+    }
+
+    private enum DynamoDBManagerType {
+        GET_USER1, GET_USER2, GET_COURSE, SAVE_USER1, SAVE_USER2, SAVE_COURSE
+    }
+
+}

@@ -1,0 +1,37 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        applicationId "com.disc.teslademo"
+        minSdkVersion 15
+        targetSdkVersion 21
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    compile files('libs/aws-android-sdk-2.1.8-cognito.debug.jar')
+    compile files('libs/aws-android-sdk-2.1.8-core.debug.jar')
+    compile files('libs/aws-android-sdk-2.1.8-ddb.debug.jar')
+    compile files('libs/aws-android-sdk-2.1.8-ddb-mapper.debug.jar')
+    compile 'com.facebook.android:facebook-android-sdk:3.21.1'
+    compile 'com.akexorcist:bluetoothspp:1.0.0'
+    compile 'com.google.android.gms:play-services:6.5.87'
+    compile 'com.android.support:appcompat-v7:21.0.3'
+    compile files('libs/EJML-core-0.26.jar')
+}

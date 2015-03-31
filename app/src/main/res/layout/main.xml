@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <fragment
+        android:name="com.disc.teslademo.LoginFragment"
+        android:id="@+id/loginFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_login" />
+
+    <fragment
+        android:name="com.disc.teslademo.NewsFeedFragment"
+        android:id="@+id/newsfeedFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_news_feed" />
+
+
+    <fragment android:name="com.facebook.widget.UserSettingsFragment"
+        android:id="@+id/userSettingsFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_news_feed" />
+
+
+</LinearLayout>
