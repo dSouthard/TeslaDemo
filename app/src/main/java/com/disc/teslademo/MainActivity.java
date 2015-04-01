@@ -59,21 +59,20 @@ public class MainActivity extends FragmentActivity
     private static final int LOGIN = 0;
     private static final int NEWSFEED = 1;
     private static final int SETTINGS = 2;
-    private static final int FRAGMENT_COUNT = SETTINGS +1;
-    private MenuItem settings;  // use this to trigger the UserSettingsFragment display
-
-    // User Profile Variables
-    private String currentUserId;
+    private static final int PROFILE = 3;
+    private static final int FRAGMENT_COUNT = PROFILE + 1;
+    private Fragment[] fragments = new Fragment[FRAGMENT_COUNT];
     public static String currentUserName;
-    private Bitmap bimage;
-    private URL image_path;
     public static MapperUser currentUser;
     public static MapperCourse course;
     public static MapperPlayedGame newGameData;
     public static CognitoCachingCredentialsProvider credentials;
     ArrayList<MapperUser> result;
-
-    private Fragment[] fragments = new Fragment[FRAGMENT_COUNT];
+    private MenuItem settings;  // use this to trigger the UserSettingsFragment display
+    // User Profile Variables
+    private String currentUserId;
+    private Bitmap bimage;
+    private URL image_path;
     private boolean isResumed = false, loggedIn = false;
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
@@ -103,16 +102,16 @@ public class MainActivity extends FragmentActivity
         currentUser = new MapperUser();
 
         loadUser();
-        int s = 0;
-        s = 1;
 
+        // Set up fragments
         FragmentManager fm = getSupportFragmentManager();
         LoginFragment loginFragment = (LoginFragment) fm.findFragmentById(R.id.loginFragment);
         fragments[LOGIN] = loginFragment;
         fragments[NEWSFEED] = fm.findFragmentById(R.id.newsfeedFragment);
         fragments[SETTINGS] = fm.findFragmentById(R.id.userSettingsFragment);
+        fragments[PROFILE] = fm.findFragmentById((R.id.userProfileFragment));
         FragmentTransaction transaction = fm.beginTransaction();
-        for (Fragment fragment : fragments) {
+        for (Fragment fragment : fragments) {   // Hide all fragments initially
             transaction.hide(fragment);
         }
         transaction.commit();
@@ -279,13 +278,16 @@ public class MainActivity extends FragmentActivity
 
     }
 
-    private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String>
-    {
-        @Override
-        protected String doInBackground(DynamoDBManagerType...types) {
-            Log.d("DoINBackGround","On doInBackground...");
+    private enum DynamoDBManagerType {
+        GET_USER, SAVE_USER
+    }
 
-            AmazonDynamoDBClient clientManager =  new AmazonDynamoDBClient(credentials);
+    private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
+        @Override
+        protected String doInBackground(DynamoDBManagerType... types) {
+            Log.d("DoINBackGround", "On doInBackground...");
+
+            AmazonDynamoDBClient clientManager = new AmazonDynamoDBClient(credentials);
             DynamoDBMapper mapper = new DynamoDBMapper(clientManager);
 
             if (loggedIn) {
@@ -343,9 +345,5 @@ public class MainActivity extends FragmentActivity
         @Override
         protected void onPostExecute(String result) {
         }
-    }
-
-    private enum DynamoDBManagerType {
-        GET_USER, SAVE_USER
     }
 }

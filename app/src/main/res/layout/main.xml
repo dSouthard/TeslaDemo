@@ -6,22 +6,30 @@
     android:orientation="vertical" >
 
     <fragment
-        android:name="com.disc.teslademo.LoginFragment"
         android:id="@+id/loginFragment"
+        android:name="com.disc.teslademo.LoginFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:layout="@layout/fragment_login" />
 
     <fragment
-        android:name="com.disc.teslademo.NewsFeedFragment"
         android:id="@+id/newsfeedFragment"
+        android:name="com.disc.teslademo.NewsFeedFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_news_feed" />
+
+    <fragment
+        android:id="@+id/userProfileFragment"
+        android:name="com.disc.teslademo.UserProfileFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:layout="@layout/fragment_news_feed" />
 
 
-    <fragment android:name="com.facebook.widget.UserSettingsFragment"
+    <fragment
         android:id="@+id/userSettingsFragment"
+        android:name="com.facebook.widget.UserSettingsFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:layout="@layout/fragment_news_feed" />

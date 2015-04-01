@@ -4,6 +4,8 @@ package com.disc.teslademo;
  * Created by davieshin on 2/10/15.
  */
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import org.ejml.simple.SimpleMatrix;
@@ -17,16 +19,26 @@ public class TrajectoryPlotter {
     private static final String TAG = "myApp";
 
     public int size, i;
-    public double a1, a2, a3, a4, a5, a6, y1, y2, y3, y4, y_squared, min_x, max_x, avg_distance, cuts, hold, temp, n;
-    public ArrayList<LatLng> plots = new ArrayList<LatLng>();
+    public double a1, a2, a3, a4, a5, a6, y1, y2, y3, y4, y_squared, min_x, max_x, avg_distance, cuts, hold, temp, n, avg_x, avg_y, avg_temp, mhold;
+    public ArrayList<LatLng> plots = new ArrayList<>();
     public double[] GPSData;
 
     public void initData(double[] BluetoothData) {
         size = BluetoothData.length;
         GPSData = new double[size];
-        for (i = 0; i < size; i = i + 1) {
+        avg_x = 0;
+        avg_y = 0;
+        for (i = 0; i < size - 1; i = i + 2) {
+            avg_x = avg_x + BluetoothData[i];
+            avg_y = avg_y + BluetoothData[i + 1];
+        }
+        avg_temp = size / 2;
+        avg_x = avg_x / avg_temp;
+        avg_y = avg_y / avg_temp;
+        for (i = 0; i < size - 1; i = i + 2) {
             //GPSData[i] = Double.parseDouble(BluetoothData[i]);
-            GPSData[i]=BluetoothData[i];
+            GPSData[i] = BluetoothData[i] - avg_x;
+            GPSData[i + 1] = BluetoothData[i + 1] - avg_y;
         }
         n=size/2;
         a1 = 0;
@@ -65,7 +77,6 @@ public class TrajectoryPlotter {
                 min_x=GPSData[i];
             if (GPSData[i] > max_x)
                 max_x=GPSData[i];
-            //if ((i + 2) > size) break;
         }
         /*
         Log.d(TAG, String.valueOf(n));
@@ -146,36 +157,36 @@ public class TrajectoryPlotter {
         //r^2
         double R_square=((n*y2)-(a1*y1))/(Math.sqrt((nn * a2) - Math.pow(a1, 2))*Math.sqrt((n * y_squared) - Math.pow(y1, 2)));
 
-//        Log.d(TAG, "%%%%%%%%%%~~~~~RSQUARED~~~~~~%%%%%%%%%%");
-//        Log.d(TAG, String.valueOf(R_square));
-//
-//        Log.d(TAG, "%%%%%%%%%%~~~~~AVALUE~~~~~~%%%%%%%%%%");
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[0]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[1]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[2]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[3]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[4]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[5]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[6]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[7]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[8]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[9]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[10]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[11]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[12]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[13]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[14]));
-//        Log.d(TAG, String.valueOf(a.getMatrix().getData()[15]));
-//        Log.d(TAG, "%%%%%%%%%%~~~~~YVALUE~~~~~~%%%%%%%%%%");
-//        Log.d(TAG, String.valueOf(b.getMatrix().getData()[0]));
-//        Log.d(TAG, String.valueOf(b.getMatrix().getData()[1]));
-//        Log.d(TAG, String.valueOf(b.getMatrix().getData()[2]));
-//        Log.d(TAG, String.valueOf(b.getMatrix().getData()[3]));
-//        Log.d(TAG, "%%%%%%%%%%~~~~~INVERSEVALUE~~~~~~%%%%%%%%%%");
-//        Log.d(TAG, String.valueOf(c.getMatrix().getData()[0]));
-//        Log.d(TAG, String.valueOf(c.getMatrix().getData()[1]));
-//        Log.d(TAG, String.valueOf(c.getMatrix().getData()[2]));
-//        Log.d(TAG, String.valueOf(c.getMatrix().getData()[3]));
+        Log.d(TAG, "%%%%%%%%%%~~~~~RSQUARED~~~~~~%%%%%%%%%%");
+        Log.d(TAG, String.valueOf(R_square));
+
+        Log.d(TAG, "%%%%%%%%%%~~~~~AVALUE~~~~~~%%%%%%%%%%");
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[0]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[1]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[2]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[3]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[4]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[5]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[6]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[7]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[8]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[9]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[10]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[11]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[12]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[13]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[14]));
+        Log.d(TAG, String.valueOf(a.getMatrix().getData()[15]));
+        Log.d(TAG, "%%%%%%%%%%~~~~~YVALUE~~~~~~%%%%%%%%%%");
+        Log.d(TAG, String.valueOf(b.getMatrix().getData()[0]));
+        Log.d(TAG, String.valueOf(b.getMatrix().getData()[1]));
+        Log.d(TAG, String.valueOf(b.getMatrix().getData()[2]));
+        Log.d(TAG, String.valueOf(b.getMatrix().getData()[3]));
+        Log.d(TAG, "%%%%%%%%%%~~~~~INVERSEVALUE~~~~~~%%%%%%%%%%");
+        Log.d(TAG, String.valueOf(c.getMatrix().getData()[0]));
+        Log.d(TAG, String.valueOf(c.getMatrix().getData()[1]));
+        Log.d(TAG, String.valueOf(c.getMatrix().getData()[2]));
+        Log.d(TAG, String.valueOf(c.getMatrix().getData()[3]));
         /*
         Log.d(TAG, String.valueOf(c.getMatrix().getData()[4]));
         Log.d(TAG, String.valueOf(c.getMatrix().getData()[5]));
@@ -230,21 +241,21 @@ public class TrajectoryPlotter {
         cuts=cuts/30;
         hold=min_x;
         // cubic if R < 0.99, else linear
-        if (R_square < 0.99) {
-            plots.add(new LatLng(hold, c.getMatrix().getData()[0] + c.getMatrix().getData()[1] * hold + c.getMatrix().getData()[2] * Math.pow(hold, 2) + c.getMatrix().getData()[3] * Math.pow(hold, 3)));
+//        if (R_square < 0.39) {
+        plots.add(new LatLng(hold + avg_x, avg_y + (c.getMatrix().getData()[0] + c.getMatrix().getData()[1] * hold + c.getMatrix().getData()[2] * Math.pow(hold, 2) + c.getMatrix().getData()[3] * Math.pow(hold, 3))));
 
-            for (i = 1; i < 31; i++) {
-                hold = hold + cuts;
-                plots.add(new LatLng(hold, c.getMatrix().getData()[0] + c.getMatrix().getData()[1] * hold + c.getMatrix().getData()[2] * Math.pow(hold, 2) + c.getMatrix().getData()[3] * Math.pow(hold, 3)));
-            }
-        } else {
-            plots.add(new LatLng(hold, c_linear.getMatrix().getData()[0] + c_linear.getMatrix().getData()[1] * hold));
-
-            for (i = 1; i < 31; i++) {
-                hold = hold + cuts;
-                plots.add(new LatLng(hold, c_linear.getMatrix().getData()[0] + c_linear.getMatrix().getData()[1] * hold));
-            }
+        for (i = 1; i < 31; i++) {
+            hold = hold + cuts;
+            plots.add(new LatLng(hold + avg_x, avg_y + (c.getMatrix().getData()[0] + c.getMatrix().getData()[1] * hold + c.getMatrix().getData()[2] * Math.pow(hold, 2) + c.getMatrix().getData()[3] * Math.pow(hold, 3))));
         }
+//        } else {
+//            plots.add(new LatLng(hold, c_linear.getMatrix().getData()[0] + c_linear.getMatrix().getData()[1] * hold));
+//
+//            for (i = 1; i < 31; i++) {
+//                hold = hold + cuts;
+//                plots.add(new LatLng(hold, c_linear.getMatrix().getData()[0] + c_linear.getMatrix().getData()[1] * hold));
+//            }
+//        }
 
 
         return plots;
@@ -258,7 +269,7 @@ public class TrajectoryPlotter {
         int count = 0;
 
         // Threshold
-        double K=2.7;
+        double K = 2.5;
 
         for (i=0; i<size1-3; i=i+2) {
             avg_distance=avg_distance+Math.sqrt(Math.pow(unfilteredData[i+2]-unfilteredData[i],2)+Math.pow(unfilteredData[i+3]-unfilteredData[i+1],2));
@@ -277,7 +288,7 @@ public class TrajectoryPlotter {
                 count = count + 1;
                 K = K * count;
             } else {
-                K = 2.7;
+                K = 2.5;
                 count = 1;
             }
         }
