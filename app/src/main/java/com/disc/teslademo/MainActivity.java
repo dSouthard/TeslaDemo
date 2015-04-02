@@ -34,7 +34,7 @@ import java.net.URL;
 import java.util.ArrayList;
 
 public class MainActivity extends FragmentActivity
-    implements LoginFragment.OnFragmentInteractionListener{
+        implements LoginFragment.OnFragmentInteractionListener, UserProfileFragment.OnFragmentInteractionListener {
 
     /* TODO:
         - Figure out how to save a screenshot of the map at the right zoom level
@@ -59,9 +59,10 @@ public class MainActivity extends FragmentActivity
     private static final int LOGIN = 0;
     private static final int NEWSFEED = 1;
     private static final int SETTINGS = 2;
-    private static final int PROFILE = 3;
-    private static final int FRAGMENT_COUNT = PROFILE + 1;
+    //    private static final int FRAGMENT_COUNT = PROFILE + 1;
+    private static final int FRAGMENT_COUNT = SETTINGS + 1;
     private Fragment[] fragments = new Fragment[FRAGMENT_COUNT];
+    private static final int PROFILE = 3;
     public static String currentUserName;
     public static MapperUser currentUser;
     public static MapperCourse course;
@@ -109,7 +110,7 @@ public class MainActivity extends FragmentActivity
         fragments[LOGIN] = loginFragment;
         fragments[NEWSFEED] = fm.findFragmentById(R.id.newsfeedFragment);
         fragments[SETTINGS] = fm.findFragmentById(R.id.userSettingsFragment);
-        fragments[PROFILE] = fm.findFragmentById((R.id.userProfileFragment));
+//        fragments[PROFILE] = fm.findFragmentById((R.id.userProfileFragment));
         FragmentTransaction transaction = fm.beginTransaction();
         for (Fragment fragment : fragments) {   // Hide all fragments initially
             transaction.hide(fragment);
@@ -120,14 +121,17 @@ public class MainActivity extends FragmentActivity
     public void loadUser() {
         new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_USER);
     }
-    public void saveUser() {new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_USER);}
+
+    public void saveUser() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_USER);
+    }
 
     @Override
     public void onResume() {
 
         Session session = Session.getActiveSession();
         if (session != null &&
-                (session.isOpened() || session.isClosed()) ) {
+                (session.isOpened() || session.isClosed())) {
             onSessionStateChange(session, session.getState(), null);
         }
         uiHelper.onResume();
@@ -226,7 +230,7 @@ public class MainActivity extends FragmentActivity
             } else if (state.isClosed()) {
                 loggedIn = false;
                 showFragment(LOGIN, false);
-                Toast.makeText(MainActivity.this,"Logged Off", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Logged Off", Toast.LENGTH_SHORT).show();
             }
         }
     }
