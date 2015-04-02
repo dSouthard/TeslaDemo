@@ -359,7 +359,7 @@ public class GameManager extends FragmentActivity
                          public void onClick(DialogInterface dialog, int id) {
                              // if this button is clicked, close
                              // current activity
- //                            numberOfTries = 0;
+                             //                            numberOfTries = 0;
                              finish();
                          }
                      })
@@ -573,23 +573,6 @@ public class GameManager extends FragmentActivity
                  // Disc is checking if connection is ready
                  sendMessage(inputString);
                  break;
- //            case "EOH":
- //                // Disc is signaling end of basket
- //                if (!basketConfirmation) {
- //                    currentGame.addHoleStroke(currentBasket - 1, currentStroke);
- //                    currentBasket++;
- //                    if (currentBasket >= 18) {
- //                        gameFinished();
- //                        Log.d(TAG, "Game successfully completed");
- //                    }
- //                    currentGame.addHoleStroke(currentBasket - 1, currentStroke);  // save stroke count
- //                    totalStrokeCount += currentStroke;
- //                    currentStroke = 0;  // reset stroke count for next hole
- //                    basketConfirmation = true;
- //                    Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
- //                    gameInfoText.setText("Current basket: " + currentBasket);
- //                }
- //                break;
              default:
                  String[] result = inputString.split(",");
                  int mLength = result.length;
@@ -602,7 +585,7 @@ public class GameManager extends FragmentActivity
                              if (!basketConfirmation) {
                                  currentGame.addHoleStroke(currentBasket - 1, currentStroke);
                                  currentBasket++;
-                                 if (currentBasket >= 18) {
+                                 if (currentBasket >= MapperCourse.MAX_NUMBER_OF_HOLES) {
                                      gameFinished();
                                      Log.d(TAG, "Game successfully completed");
                                  }
@@ -651,7 +634,7 @@ public class GameManager extends FragmentActivity
          Toast.makeText(this, "Adding new points", Toast.LENGTH_SHORT).show();
 
          // Initialize constants and flight data
- //        GPSinput = trajectory.filter(GPSinput);
+         //        GPSinput = trajectory.filter(GPSinput);
          trajectory.initData(GPSinput);
          points = trajectory.mapTrajectory();
 
@@ -679,75 +662,75 @@ public class GameManager extends FragmentActivity
          saveGameData();     // Save to server
      }
 
- //    public void captureScreen()
- //    {
- //        SnapshotReadyCallback callback = new SnapshotReadyCallback()
- //        {
- //
- //            @Override
- //            public void onSnapshotReady(Bitmap snapshot)
- //            {
- //                // TODO Auto-generated method stub
- //                bitmap = snapshot;
- //
- //                OutputStream fout = null;
- //
- //                String filePath = System.currentTimeMillis() + ".jpeg";
- //
- //                try
- //                {
- //                    fout = openFileOutput(filePath,
- //                            MODE_WORLD_READABLE);
- //
- //                    // Write the string to the file
- //                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fout);
- //                    fout.flush();
- //                    fout.close();
- //                }
- //                catch (FileNotFoundException e)
- //                {
- //                    // TODO Auto-generated catch block
- //                    Log.d("ImageCapture", "FileNotFoundException");
- //                    Log.d("ImageCapture", e.getMessage());
- //                    filePath = "";
- //                }
- //                catch (IOException e)
- //                {
- //                    // TODO Auto-generated catch block
- //                    Log.d("ImageCapture", "IOException");
- //                    Log.d("ImageCapture", e.getMessage());
- //                    filePath = "";
- //                }
- //
- //                openShareImageDialog(filePath);
- //            }
- //        };
- //
- //        mMap.snapshot(callback);
- //    }
- //
- //    public void openShareImageDialog(String filePath)
- //    {
- //        File file = this.getFileStreamPath(filePath);
- //
- //        if(!filePath.equals(""))
- //        {
- //            final ContentValues values = new ContentValues(2);
- //            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
- //            values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
- //            final Uri contentUriFile = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
- //
- //            final Intent intent = new Intent(android.content.Intent.ACTION_SEND);
- //            intent.setType("image/jpeg");
- //            intent.putExtra(android.content.Intent.EXTRA_STREAM, contentUriFile);
- //            startActivity(Intent.createChooser(intent, "Share Image"));
- //        }
- //        else
- //        {
- //            //This is a custom class I use to show dialogs...simply replace this with whatever you want to show an error message, Toast, etc.
- //            DialogUtilities.showOkDialogWithText(this, R.string.shareImageFailed);
- //        }
- //    }
+     //    public void captureScreen()
+     //    {
+     //        SnapshotReadyCallback callback = new SnapshotReadyCallback()
+     //        {
+     //
+     //            @Override
+     //            public void onSnapshotReady(Bitmap snapshot)
+     //            {
+     //                // TODO Auto-generated method stub
+     //                bitmap = snapshot;
+     //
+     //                OutputStream fout = null;
+     //
+     //                String filePath = System.currentTimeMillis() + ".jpeg";
+     //
+     //                try
+     //                {
+     //                    fout = openFileOutput(filePath,
+     //                            MODE_WORLD_READABLE);
+     //
+     //                    // Write the string to the file
+     //                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fout);
+     //                    fout.flush();
+     //                    fout.close();
+     //                }
+     //                catch (FileNotFoundException e)
+     //                {
+     //                    // TODO Auto-generated catch block
+     //                    Log.d("ImageCapture", "FileNotFoundException");
+     //                    Log.d("ImageCapture", e.getMessage());
+     //                    filePath = "";
+     //                }
+     //                catch (IOException e)
+     //                {
+     //                    // TODO Auto-generated catch block
+     //                    Log.d("ImageCapture", "IOException");
+     //                    Log.d("ImageCapture", e.getMessage());
+     //                    filePath = "";
+     //                }
+     //
+     //                openShareImageDialog(filePath);
+     //            }
+     //        };
+     //
+     //        mMap.snapshot(callback);
+     //    }
+     //
+     //    public void openShareImageDialog(String filePath)
+     //    {
+     //        File file = this.getFileStreamPath(filePath);
+     //
+     //        if(!filePath.equals(""))
+     //        {
+     //            final ContentValues values = new ContentValues(2);
+     //            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+     //            values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
+     //            final Uri contentUriFile = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+     //
+     //            final Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+     //            intent.setType("image/jpeg");
+     //            intent.putExtra(android.content.Intent.EXTRA_STREAM, contentUriFile);
+     //            startActivity(Intent.createChooser(intent, "Share Image"));
+     //        }
+     //        else
+     //        {
+     //            //This is a custom class I use to show dialogs...simply replace this with whatever you want to show an error message, Toast, etc.
+     //            DialogUtilities.showOkDialogWithText(this, R.string.shareImageFailed);
+     //        }
+     //    }
 
 
      private void exitGameDialog() {
@@ -939,15 +922,15 @@ public class GameManager extends FragmentActivity
          }
 
          /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
-     /*::  This function converts decimal degrees to radians             :*/
-     /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+       /*::  This function converts decimal degrees to radians             :*/
+       /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
          private double deg2rad(double deg) {
              return (deg * Math.PI / 180.0);
          }
 
          /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
-     /*::  This function converts radians to decimal degrees             :*/
-     /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+       /*::  This function converts radians to decimal degrees             :*/
+       /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
          private double rad2deg(double rad) {
              return (rad * 180.0 / Math.PI);
          }

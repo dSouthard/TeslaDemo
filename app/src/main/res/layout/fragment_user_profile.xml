@@ -33,7 +33,7 @@
                 android:layout_weight="0.23" />
 
             <TextView
-                android:id="@+id/userName"
+                android:id="@+id/userProfileName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
@@ -41,22 +41,21 @@
                 android:textAppearance="?android:attr/textAppearanceLarge" />
 
             <TextView
-                android:id="@+id/userEmailTextField"
+                android:id="@+id/lastGamePlayed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_weight="0.23"
-                android:text="User Email Here"
+                android:text="Last Game Played Date"
                 android:textAppearance="?android:attr/textAppearanceMedium" />
 
-            <TextView
-                android:id="@+id/friendsListField"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageButton
+                android:id="@+id/friendsListButton"
+                android:layout_width="71dp"
+                android:layout_height="52dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_weight="0.23"
-                android:text="Number of Friends"
-                android:textAppearance="?android:attr/textAppearanceSmall" />
+                android:clickable="true"
+                android:src="@drawable/add_friends" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -78,7 +77,7 @@
                     android:text="Update Name" />
 
                 <Button
-                    android:id="@+id/updateEmailButton"
+                    android:id="@+id/updateUserPictureButtn"
                     style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -104,7 +103,7 @@
         android:fillViewport="true">
 
         <TextView
-            android:id="@+id/recentActivityTextField"
+            android:id="@+id/recentActivity"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Recent Activity Field"

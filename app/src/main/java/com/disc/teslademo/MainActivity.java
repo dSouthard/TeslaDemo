@@ -65,10 +65,12 @@ public class MainActivity extends FragmentActivity
     private static final int PROFILE = 3;
     public static String currentUserName;
     public static MapperUser currentUser;
-    public static MapperCourse course;
-    public static MapperPlayedGame newGameData;
     public static CognitoCachingCredentialsProvider credentials;
-    ArrayList<MapperUser> result;
+
+
+    public static ArrayList<MapperUser> userSearchResults;
+    public static ArrayList<MapperPlayedGame> playedGamesSearchResults;
+
     private MenuItem settings;  // use this to trigger the UserSettingsFragment display
     // User Profile Variables
     private String currentUserId;
@@ -302,14 +304,14 @@ public class MainActivity extends FragmentActivity
                             // Retrieve all users from saved User Table, returned in undetermined order
                             DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
                             PaginatedScanList scanResult = mapper.scan(MapperUser.class, scanExpression);
-                            result = new ArrayList<>();
-                            result.addAll(scanResult);        // Change result to ArrayList
+                            userSearchResults = new ArrayList<>();
+                            userSearchResults.addAll(scanResult);        // Change result to ArrayList
                             Log.d(TAG, "Retrieved all saved users");
 
-                            for (int i = 0; i < result.size(); i++) {
-                                if (result.get(i).getUserId().equals(currentUserId)) {
+                            for (int i = 0; i < userSearchResults.size(); i++) {
+                                if (userSearchResults.get(i).getUserId().equals(currentUserId)) {
                                     Log.d(TAG, "Logged in user exists, loading......");
-                                    MapperUser temp = mapper.load(MapperUser.class, result.get(i).getUserId());
+                                    MapperUser temp = mapper.load(MapperUser.class, userSearchResults.get(i).getUserId());
                                     currentUser.setUser(temp);
                                 }
                             }
