@@ -23,7 +23,6 @@ public class MapperUser {
     private Set<String> pendingFriends;    // stores IDs of all users pending as friends
     private Set<String> playedGames;       // stores IDs of all games played
     private Set<String> likedGames;        // stores IDs of liked games
-//    private String userPicId;               // name of stored user ID pic
 
     public MapperUser() {  // Constructor
         userName = null;
@@ -62,28 +61,6 @@ public class MapperUser {
         this.userName = userName;
     }
 
-//    @DynamoDBAttribute(attributeName = "Friend")
-//    public String getFriend() {return friend;}
-//    public void setFriend(String newValue) {friend = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "PlayedGame")
-//    public String getPlayedGame() {return playedGame;}
-//    public void setPlayedGame(String newValue) {playedGame = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "Likes")
-//    public int getLikes() {return likes;}
-//    public void setLikes(int newValue) {likes = newValue;}
-
-
-//    @DynamoDBAttribute(attributeName = "UserPicID")
-//    public String getUserPicId() {
-//        return userPicId;
-//    }
-//
-//    public void setUserPicId(String userPicId) {
-//        this.userPicId = userPicId;
-//    }
-//
     @DynamoDBAttribute(attributeName = "LikedGames")
     public Set<String> getLikedGames() {
         return likedGames;
@@ -93,7 +70,8 @@ public class MapperUser {
         if (!likedGames.isEmpty()) {
             likedGames.clear();
         }
-        return likedGames.addAll(newlikedGames);
+        if (!newlikedGames.isEmpty()) return likedGames.addAll(newlikedGames);
+        else return false;
     }
 
     public boolean addLikedGame(String newLikedGame) {

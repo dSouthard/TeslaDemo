@@ -144,6 +144,9 @@
     <string name="default_value_end_of_line_0A_preference">10</string>
     <string name="default_screenorientation_preference">0</string>
 
+    <string name="TeslaDiscAddress">"00:06:66:68:32:5C"</string>
+    <string name="RNBTAddress">"00:06:66:68:32:62"</string>
+
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <!--</resources>-->

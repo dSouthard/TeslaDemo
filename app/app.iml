@@ -94,6 +94,7 @@
     <orderEntry type="library" exported="" name="support-annotations-21.0.3" level="project" />
     <orderEntry type="library" exported="" name="facebook-android-sdk-3.21.1" level="project" />
     <orderEntry type="library" exported="" name="support-v4-21.0.3" level="project" />
+    <orderEntry type="library" exported="" name="aws-android-sdk-2.1.8-s3.debug" level="project" />
     <orderEntry type="library" exported="" name="bolts-android-1.1.2" level="project" />
     <orderEntry type="library" exported="" name="aws-android-sdk-2.1.8-core.debug" level="project" />
     <orderEntry type="library" exported="" name="aws-android-sdk-2.1.8-cognito.debug" level="project" />

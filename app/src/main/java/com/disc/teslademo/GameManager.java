@@ -1,52 +1,52 @@
 package com.disc.teslademo;
 
 import android.app.Activity;
- import android.app.AlertDialog;
- import android.bluetooth.BluetoothAdapter;
- import android.bluetooth.BluetoothDevice;
- import android.content.Context;
- import android.content.DialogInterface;
- import android.content.Intent;
- import android.graphics.Color;
- import android.location.Location;
- import android.location.LocationManager;
- import android.os.AsyncTask;
- import android.os.Bundle;
- import android.os.Handler;
- import android.os.Message;
- import android.support.v4.app.FragmentActivity;
- import android.util.Log;
- import android.view.Menu;
- import android.view.MenuInflater;
- import android.view.MenuItem;
- import android.view.View;
- import android.widget.Button;
- import android.widget.TextView;
- import android.widget.Toast;
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.app.FragmentActivity;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
- import com.amazonaws.AmazonServiceException;
- import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
- import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBScanExpression;
- import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.PaginatedScanList;
- import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
- import com.google.android.gms.common.ConnectionResult;
- import com.google.android.gms.common.api.GoogleApiClient;
- import com.google.android.gms.location.LocationListener;
- import com.google.android.gms.location.LocationRequest;
- import com.google.android.gms.location.LocationServices;
- import com.google.android.gms.maps.CameraUpdateFactory;
- import com.google.android.gms.maps.GoogleMap;
- import com.google.android.gms.maps.MapFragment;
- import com.google.android.gms.maps.OnMapReadyCallback;
- import com.google.android.gms.maps.model.BitmapDescriptorFactory;
- import com.google.android.gms.maps.model.LatLng;
- import com.google.android.gms.maps.model.MarkerOptions;
- import com.google.android.gms.maps.model.PolylineOptions;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBScanExpression;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.PaginatedScanList;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 
- import java.sql.Timestamp;
- import java.text.DateFormat;
- import java.util.ArrayList;
- import java.util.Date;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 
 public class GameManager extends FragmentActivity
          implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
@@ -194,6 +194,12 @@ public class GameManager extends FragmentActivity
              return;
          }
          mSerialService = new BluetoothSerialService(this, mHandlerBT, textView);
+
+         // Automatically start up connection
+         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(getString(R.string.TeslaDiscAddress));
+//         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(getString(R.string.RNBTAddress));
+         // Attempt to connect to the device
+         mSerialService.connect(device);
 
          // Setup map
          mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -662,87 +668,16 @@ public class GameManager extends FragmentActivity
          saveGameData();     // Save to server
      }
 
-     //    public void captureScreen()
-     //    {
-     //        SnapshotReadyCallback callback = new SnapshotReadyCallback()
-     //        {
-     //
-     //            @Override
-     //            public void onSnapshotReady(Bitmap snapshot)
-     //            {
-     //                // TODO Auto-generated method stub
-     //                bitmap = snapshot;
-     //
-     //                OutputStream fout = null;
-     //
-     //                String filePath = System.currentTimeMillis() + ".jpeg";
-     //
-     //                try
-     //                {
-     //                    fout = openFileOutput(filePath,
-     //                            MODE_WORLD_READABLE);
-     //
-     //                    // Write the string to the file
-     //                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fout);
-     //                    fout.flush();
-     //                    fout.close();
-     //                }
-     //                catch (FileNotFoundException e)
-     //                {
-     //                    // TODO Auto-generated catch block
-     //                    Log.d("ImageCapture", "FileNotFoundException");
-     //                    Log.d("ImageCapture", e.getMessage());
-     //                    filePath = "";
-     //                }
-     //                catch (IOException e)
-     //                {
-     //                    // TODO Auto-generated catch block
-     //                    Log.d("ImageCapture", "IOException");
-     //                    Log.d("ImageCapture", e.getMessage());
-     //                    filePath = "";
-     //                }
-     //
-     //                openShareImageDialog(filePath);
-     //            }
-     //        };
-     //
-     //        mMap.snapshot(callback);
-     //    }
-     //
-     //    public void openShareImageDialog(String filePath)
-     //    {
-     //        File file = this.getFileStreamPath(filePath);
-     //
-     //        if(!filePath.equals(""))
-     //        {
-     //            final ContentValues values = new ContentValues(2);
-     //            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-     //            values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
-     //            final Uri contentUriFile = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-     //
-     //            final Intent intent = new Intent(android.content.Intent.ACTION_SEND);
-     //            intent.setType("image/jpeg");
-     //            intent.putExtra(android.content.Intent.EXTRA_STREAM, contentUriFile);
-     //            startActivity(Intent.createChooser(intent, "Share Image"));
-     //        }
-     //        else
-     //        {
-     //            //This is a custom class I use to show dialogs...simply replace this with whatever you want to show an error message, Toast, etc.
-     //            DialogUtilities.showOkDialogWithText(this, R.string.shareImageFailed);
-     //        }
-     //    }
-
-
-     private void exitGameDialog() {
+    private void exitGameEarlyDialog() {
          AlertDialog.Builder exitDialogBuilder = new AlertDialog.Builder(this);
          exitDialogBuilder.setTitle("Exit Game");
          exitDialogBuilder.setMessage("Are you sure you want to exit? If you leave" +
                  "before a full game is over, your data will not be saved");
          exitDialogBuilder.setPositiveButton("Exit", new DialogInterface.OnClickListener() {
              public void onClick(DialogInterface dialog, int id) {
-                 // if this button is clicked, close
-                 // current activity
-                 // numberOfTries = 0;
+                 // if this button is clicked, close current activity
+                 Intent intent = new Intent();
+                 setResult(RESULT_CANCELED, intent);
                  finish();
              }
          });
@@ -757,6 +692,30 @@ public class GameManager extends FragmentActivity
          AlertDialog exitDialog = exitDialogBuilder.create();
          exitDialog.show();
      }
+
+    private void exitGameDialog() {
+        AlertDialog.Builder exitDialogBuilder = new AlertDialog.Builder(this);
+        exitDialogBuilder.setTitle("Exit Game");
+        exitDialogBuilder.setMessage("Are you sure you want to exit?");
+        exitDialogBuilder.setPositiveButton("Exit", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // if this button is clicked, close current activity
+                Intent intent = new Intent();
+                intent.putExtra("GameID", currentGame.getgameId());
+                setResult(RESULT_OK, intent);
+                finish();
+            }
+        });
+        exitDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // Do nothing
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog exitDialog = exitDialogBuilder.create();
+        exitDialog.show();
+    }
 
      /**
       * ************************************ Menu Options ***************************
@@ -774,6 +733,12 @@ public class GameManager extends FragmentActivity
          }
          return true;
      }
+
+    @Override
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed Called");
+        exitGameEarlyDialog();
+    }
 
      @Override
      public boolean onOptionsItemSelected(MenuItem item) {
@@ -795,7 +760,7 @@ public class GameManager extends FragmentActivity
                  updateCourseData(tPad);
                  return true;
              case R.id.exitGame:
-                 exitGameDialog();
+                 exitGameEarlyDialog();
                  return true;
          }
          return false;

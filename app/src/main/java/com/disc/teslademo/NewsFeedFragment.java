@@ -1,255 +1,261 @@
 package com.disc.teslademo;
 
-import android.app.AlertDialog;
- import android.content.DialogInterface;
- import android.content.Intent;
- import android.os.Bundle;
- import android.support.v4.app.Fragment;
- import android.util.Log;
- import android.view.LayoutInflater;
- import android.view.View;
- import android.view.ViewGroup;
- import android.widget.Button;
- import android.widget.EditText;
- import android.widget.TextView;
- import android.widget.Toast;
+import android.app.Activity;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
 
 public class NewsFeedFragment extends Fragment {
 
-     private static final String TAG = "NewsFeedFragment";
-     private TextView wallFeed, userName;
-     private Button likePostBttn = null;
+    private static final String TAG = "NewsFeedFragment";
+    private static int NEW_GAME = 11, VIEW_DETAILS = 12;
+    private ListView wallFeed;
+    private ImageView profilePicture;
+    private ArrayList<String> wallList;
+    private ArrayAdapter<String> listAdapter;
+    private TextView userName;
 
-     @Override
-     public View onCreateView(LayoutInflater inflater,
-                              ViewGroup container, Bundle savedInstanceState) {
-         super.onCreateView(inflater, container, savedInstanceState);
-         View view = inflater.inflate(R.layout.fragment_news_feed,
-                 container, false);
+    private MapperPlayedGame gameTemp;
+    private MapperUser userTemp;
+    private String loadID;
 
-         wallFeed = (TextView) view.findViewById(R.id.wallFeed);
-         userName = (TextView) view.findViewById(R.id.currentUserNameTxt);
-         if (MainActivity.currentUser != null && MainActivity.currentUser.getUserName() != null) {
-             userName.setText(MainActivity.currentUser.getUserName());
-             updateWallFeed();
-         }
- //        else {
- //            ((MainActivity)getActivity()).loadUser();
- //            userName.setText(MainActivity.currentUser.getUserName());
- //        }
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        super.onCreateView(inflater, container, savedInstanceState);
+        View view = inflater.inflate(R.layout.fragment_news_feed,
+                container, false);
 
-         final Button startNewGameBttn = (Button) view.findViewById(R.id.newGameButton);
-         startNewGameBttn.setOnClickListener(new View.OnClickListener() {
+        gameTemp = new MapperPlayedGame();
+        userTemp = new MapperUser();
 
-             public void onClick(View v) {
-                 Log.i(TAG, "startNewGameBttn clicked.");
- //                Intent intent = new Intent(getActivity(), GameManager.class);
-                 Intent intent = new Intent(getActivity(), GameManager.class);
-                 startActivity(intent);
- //                ((MainActivity)getActivity()).saveUser();   // Save user once you return from new game
-             }
-         });
-
-         final Button updateWallBttn = (Button) view.findViewById(R.id.updateWallBttn);
-         updateWallBttn.setOnClickListener(new View.OnClickListener() {
-
-             public void onClick(View v) {
-                 Log.i(TAG, "updateWallBttn clicked.");
-                 ((MainActivity) getActivity()).loadUser();
-                 updateWallFeed();
-             }
-         });
-
-         final Button findFriendsBttn = (Button) view.findViewById(R.id.findFriendsBttn);
-         if (MainActivity.currentUser != null && MainActivity.currentUser.getUserName() == null)
-             ((MainActivity) getActivity()).loadUser();
-         findFriendsBttn.setOnClickListener(new View.OnClickListener() {
-
-             public void onClick(View v) {
-                 Log.i(TAG, "findFriendsBttn clicked.");
-                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
-
-                 // set title
-                 alertDialogBuilder.setTitle("Add a Friend");
-
-                 // set dialog message
-                 alertDialogBuilder.setMessage("Do you want to add "
-                         + " as a friend?");
-                 alertDialogBuilder.setCancelable(false);
-                 alertDialogBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
- //                    MainActivity.currentUser.addFriend(MainActivity.user2.getUserId());
-                         ((MainActivity) getActivity()).loadUser();
-                         updateWallFeed();
-                     }
-                 });
-                 alertDialogBuilder.setNegativeButton("No", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
-                         dialog.cancel();    // do nothing
-                     }
-                 });
-                 // create alert dialog
-                 AlertDialog alertDialog = alertDialogBuilder.create();
-
-                 // show it
-                 alertDialog.show();
-             }
-
-         });
-
-         likePostBttn = (Button) view.findViewById(R.id.likePostBttn);
-         if (MainActivity.currentUser == null || MainActivity.currentUser.getFriends() == null)
-             likePostBttn.setVisibility(View.INVISIBLE);
-         likePostBttn.setOnClickListener(new View.OnClickListener() {
-
-             public void onClick(View v) {
-                 Log.i(TAG, "likePostBttn clicked.");
-                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
-
-                 // set title
-                 alertDialogBuilder.setTitle("Like Post");
-
-                 // set dialog message
-                 alertDialogBuilder.setMessage("Do you want to like this post?");
-                 alertDialogBuilder.setCancelable(false);
-                 alertDialogBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
- //                        int currentLikes = MainActivity.user2.getLikes();
- //                        MainActivity.currentUser.addLikedGame();
- //                        ((MainActivity)getActivity()).updateUser2();
-                         ((MainActivity) getActivity()).loadUser();
-                         updateWallFeed();
-                     }
-                 });
-                 alertDialogBuilder.setNegativeButton("No", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
-                         dialog.cancel();    // do nothing
-                     }
-                 });
-                 // create alert dialog
-                 AlertDialog alertDialog = alertDialogBuilder.create();
-
-                 // show it
-                 alertDialog.show();
-             }
-
-         });
-
-         Button updateNameBttn = (Button) view.findViewById(R.id.updateNameBttn);
-         updateNameBttn.setVisibility(View.VISIBLE);
-         updateNameBttn.setOnClickListener(new View.OnClickListener() {
-
-             public void onClick(View v) {
-                 Log.i(TAG, "updateNameBttn clicked.");
-                 LayoutInflater layoutInflater = LayoutInflater.from(getActivity());
-                 View promptView = layoutInflater.inflate(R.layout.change_name_prompt_dialog, null);
-                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
-
-                 // set title
-                 alertDialogBuilder.setTitle("Update User Name");
-
-                 // set prompts.xml to be the layout file of the alertdialog builder
-                 alertDialogBuilder.setView(promptView);
-                 final EditText input = (EditText) promptView.findViewById(R.id.userInput);
-
-                 // set dialog message
-                 alertDialogBuilder.setMessage("Do you want to change your name?");
-                 alertDialogBuilder.setCancelable(false);
-                 alertDialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
-                         //  get user input and set it to result
-                         MainActivity.currentUser.setUserName(input.getText().toString());
-                         ((MainActivity) getActivity()).saveUser();   // save to server
- //                        ((MainActivity)getActivity()).updatecurrentUser();
-                         userName.setText(input.getText().toString());
-                         input.setText("");  // clear input field
-                         Toast.makeText(getActivity(), "Name updated!", Toast.LENGTH_LONG).show();
-                         updateWallFeed();
-                     }
-                 });
-                 alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
-                         // if this button is clicked, just close
-                         // the dialog box and do nothing
-                         dialog.cancel();
-                     }
-                 });
-                 // create alert dialog
-                 AlertDialog alertDialog = alertDialogBuilder.create();
-
-                 // show it
-                 alertDialog.show();
-             }
-
-         });
+        userName = (TextView) view.findViewById(R.id.userNameField);
+        wallFeed = (ListView) view.findViewById(R.id.wallFeedListView);
+        profilePicture = (ImageView) view.findViewById(R.id.newsFeedProfilePic);
+        if (MainActivity.currentUser != null) {
+            if (MainActivity.currentUser.getUserName().equals("Diana Southard"))
+                profilePicture.setImageResource(R.drawable.max);
+            else profilePicture.setImageResource(R.drawable.squirrel);
+        } else {
+            profilePicture.setImageResource(R.drawable.com_facebook_profile_picture_blank_portrait);
+        }
 
 
-         Button userProfile = (Button) view.findViewById(R.id.userProfile);
-         userProfile.setOnClickListener(new View.OnClickListener() {
+        wallList = new ArrayList<>();
+        listAdapter = new ArrayAdapter<>(getActivity(), R.layout.friend_name, wallList);
+        wallFeed.setAdapter(listAdapter);
 
-             public void onClick(View v) {
-                 Log.i(TAG, "userProfile clicked.");
-                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(getActivity());
+        // Set up wall feed
+        updateWallFeed();   // get recent activity
 
-                 // set title
-                 alertDialogBuilder.setTitle("User Profile");
+        final Button startNewGameBttn = (Button) view.findViewById(R.id.newGameButton);
+        startNewGameBttn.setOnClickListener(new View.OnClickListener() {
 
-                 // set dialog message
-                 if (MainActivity.currentUser.getPlayedGames() != null) ;
- //                    alertDialogBuilder.setMessage(MainActivity.currentUser.getPlayedGames());
-                 else
-                     alertDialogBuilder.setMessage("No saved games.");
-                 alertDialogBuilder.setCancelable(false);
-                 alertDialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                     public void onClick(DialogInterface dialog, int id) {
-                         //  get user input and set it to result
-                         dialog.dismiss();
-                     }
-                 });
+            public void onClick(View v) {
+                Log.i(TAG, "startNewGameBttn clicked.");
+                Intent intent = new Intent(getActivity(), GameManager.class);
+                startActivityForResult(intent, NEW_GAME);
+            }
+        });
 
-                 // create alert dialog
-                 AlertDialog alertDialog = alertDialogBuilder.create();
+        final Button updateWallBttn = (Button) view.findViewById(R.id.updateWallBttn);
+        updateWallBttn.setOnClickListener(new View.OnClickListener() {
 
-                 // show it
-                 alertDialog.show();
-             }
+            public void onClick(View v) {
+                Log.i(TAG, "updateWallBttn clicked.");
+                if (MainActivity.currentUser == null)
+                    ((MainActivity) getActivity()).loadUser();
+                updateWallFeed();
+            }
+        });
 
-         });
+        Button userProfile = (Button) view.findViewById(R.id.userProfile);
+        userProfile.setOnClickListener(new View.OnClickListener() {
+
+            public void onClick(View v) {
+                Log.i(TAG, "userProfile clicked.");
+                Intent intent = new Intent(getActivity(), UserProfileActivity.class);
+                startActivity(intent);
+            }
+
+        });
 
 
-         return view;
-     }
+        return view;
+    }
 
-     public void updateWallFeed() {
-         String wallFeedString = "USER ACTIVITY:";
- //        String wallFeedString = "";
-         StringBuilder sb = new StringBuilder(wallFeedString);
-         if (MainActivity.currentUser.getPlayedGames() == null) {
-             // No friends
-             sb.append("No user activity to display");
-         } else {
-             sb.append(System.getProperty("line.separator"));
-             sb.append(System.getProperty("line.separator"));
-             sb.append("You: ");
-             sb.append(System.getProperty("line.separator"));
-             for (int i = 0; i < MainActivity.currentUser.getPlayedGames().size(); i++) {
-                 sb.append(MainActivity.currentUser.getPlayedGames());
-             }
-         }
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == NEW_GAME) {
+            if (resultCode == Activity.RESULT_OK) {
+                MainActivity.currentUser.addPlayedGame(data.getStringExtra("GameID"));
+                updateWallFeed();
+            }
+        }
+    }
 
-         if (MainActivity.currentUser.getFriends().isEmpty()) {
-             // No friends
-             sb.append("No friend activity to display");
-         } else {
-             sb.append("FRIEND ACTIVITY:");
- //            sb.append(System.getProperty("line.separator"));
- //            sb.append(System.getProperty("line.separator"));
- //            sb.append(MainActivity.user2.getUserName());
- //            sb.append(System.getProperty("line.separator"));
- //            sb.append(MainActivity.user2.getPlayedGame());
- //            likePostBttn.setText("Likes:" + MainActivity.user2.getLikes());
-             likePostBttn.setVisibility(View.VISIBLE);
-         }
-         wallFeed.setText(sb.toString());
-     }
- }
+    public void updateWallFeed() {
+
+        if (MainActivity.currentUser != null && MainActivity.currentUser.getUserName() != null) {
+            userName.setText(MainActivity.currentUser.getUserName());
+            if (MainActivity.currentUser.getUserName().equals("Diana Southard"))
+                profilePicture.setImageResource(R.drawable.max);
+            else profilePicture.setImageResource(R.drawable.squirrel);
+        } else {
+            profilePicture.setImageResource(R.drawable.com_facebook_profile_picture_blank_portrait);
+        }
+
+
+        if (!wallList.isEmpty()) wallList.clear();
+        if (!listAdapter.isEmpty()) listAdapter.clear();
+
+        boolean recentActivity = false;
+        if (MainActivity.currentUser != null && MainActivity.currentUser.getUserName() != null) {
+            Iterator<String> gameIterator;
+
+            StringBuilder forWall = new StringBuilder();
+
+            // Add user games
+            Set<String> setTemp1 = MainActivity.currentUser.getPlayedGames();
+            if (!setTemp1.isEmpty()) {
+                for (gameIterator = setTemp1.iterator(); gameIterator.hasNext(); ) {
+                    loadID = gameIterator.toString();
+                    getGame();
+                    for (int i = 0; i < 500; i++) ;
+                    // Get Game Summary
+                    String newSummary = makeGameSummary();
+                    wallList.add(newSummary);
+                }
+                recentActivity = true;
+            }
+
+            // Get friends' games
+            Set<String> setTemp2 = MainActivity.currentUser.getFriends();
+            if (!setTemp2.isEmpty()) {
+                for (gameIterator = setTemp2.iterator(); gameIterator.hasNext(); ) {
+                    loadID = gameIterator.toString();
+                    getFriend();
+                    for (int i = 0; i < 500; i++) ;
+                    Set<String> subSet = userTemp.getPlayedGames();
+                    if (!subSet.isEmpty()) {
+                        for (String aSubSet : subSet) {
+                            loadID = aSubSet.toString();
+                            getGame();
+                            for (int i = 0; i < 500; i++) ;
+                            String newSummary = makeGameSummary();
+                            wallList.add(newSummary);
+                        }
+                    }
+                }
+                recentActivity = true;
+            }
+
+            if (!recentActivity) {
+                forWall.append("No recent activity.");
+                forWall.append(System.getProperty("line.separator"));
+                forWall.append(System.getProperty("line.separator"));
+            }
+            wallList.add(forWall.toString());
+        } else {
+            wallList.add("Not logged in.");
+        }
+
+        listAdapter.notifyDataSetChanged();
+    }
+
+    private String makeGameSummary() {
+        StringBuilder forWall = new StringBuilder();
+        // Get Game Summary
+        forWall.append("Played by: " + gameTemp.getPlayedBy() + " on " + gameTemp.getGameDate());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("Played at: " + gameTemp.getGameLocation());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("Total stroke count: " + gameTemp.getTotalStrokes());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("Likes: " + gameTemp.getLikes());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append(System.getProperty("line.separator"));
+        return forWall.toString();
+    }
+
+
+    private void getGame() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_GAME);
+    }
+
+    private void getFriend() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_FRIEND);
+    }
+
+    private enum DynamoDBManagerType {
+        GET_GAME, GET_FRIEND
+    }
+
+    private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
+        @Override
+        protected String doInBackground(DynamoDBManagerType... types) {
+            Log.d("DoINBackGround", "On doInBackground...");
+
+            AmazonDynamoDBClient clientManager = new AmazonDynamoDBClient(MainActivity.credentials);
+            DynamoDBMapper mapper = new DynamoDBMapper(clientManager);
+
+            switch (types[0]) {
+                case GET_GAME:
+                    try {
+                        Log.d(TAG, "Loading Game " + loadID);
+                        gameTemp = mapper.load(MapperPlayedGame.class, loadID);
+                    } catch (AmazonServiceException ex) {
+                        Log.e(TAG, "Error loading game " + loadID);
+                        Log.e(TAG, "Error: " + ex);
+                    }
+                    break;
+                case GET_FRIEND:
+                    try {
+                        Log.d(TAG, "Loading Friend " + loadID);
+                        userTemp = mapper.load(MapperUser.class, loadID);
+                        removeEmpty(DynamoDBManagerType.GET_FRIEND);
+                    } catch (AmazonServiceException ex) {
+                        Log.e(TAG, "Error loading game " + loadID);
+                        Log.e(TAG, "Error: " + ex);
+                    }
+                    break;
+            }
+            return null;
+        }
+
+        private void removeEmpty(DynamoDBManagerType type) {
+            if (type == DynamoDBManagerType.GET_FRIEND) {
+                userTemp.removePendingFriend("Empty");
+                userTemp.removeLikedGame("Empty");
+                userTemp.removePlayedGame("Empty");
+                userTemp.removeFriend("Empty");
+            }
+            if (type == DynamoDBManagerType.GET_GAME) {
+
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+        }
+    }
+}

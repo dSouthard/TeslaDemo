@@ -6,8 +6,6 @@
     android:weightSum="1"
     tools:context="com.disc.teslademo.UserProfileFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="200dp"
@@ -15,11 +13,10 @@
         android:weightSum="1">
 
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/userProfileImageView"
             android:layout_width="128dp"
             android:layout_height="152dp"
-            android:layout_weight="0.26"
-            android:src="@drawable/com_facebook_profile_picture_blank_square" />
+            android:layout_weight="0.26" />
 
         <LinearLayout
             android:layout_width="222dp"
@@ -57,32 +54,12 @@
                 android:clickable="true"
                 android:src="@drawable/add_friends" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/updateNameButton"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="0.23"
-                android:orientation="horizontal"
-                android:weightSum="1">
-
-                <Space
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_weight="2" />
-
-                <Button
-                    android:id="@+id/updateNameButton"
-                    style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Update Name" />
-
-                <Button
-                    android:id="@+id/updateUserPictureButtn"
-                    style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Update Email" />
-            </LinearLayout>
+                android:text="Update Name" />
 
         </LinearLayout>
 
