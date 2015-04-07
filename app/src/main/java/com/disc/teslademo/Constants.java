@@ -18,30 +18,13 @@ package com.disc.teslademo;
 public class Constants {
 
     public static final String AWS_ACCOUNT_ID = "644469153533";
-    public static final String AWS_ACCESS_KEY = "AKIAIWPGSMB77SMNRRGQ";
     public static final String IDENTITY_POOL_ID = "us-east-1:01c589d1-d65e-4c2b-b0f5-15f72bf52053";
     public static final String UNAUTH_ROLE_ARN = "arn:aws:iam::644469153533:role/Cognito_TeslaAppPoolUnauth_DefaultRole";
     public static final String AUTH_ROLE_ARN = "arn:aws:iam::644469153533:role/Cognito_TeslaAppPoolAuth_DefaultRole";
-    public static final String AWS_SECRET = "SbLFuq86JY4kaaZFjZGa6rHYqgKQSTKTh1wMyo0e";
 
     // Note that spaces are not allowed in the table name
-    public static final String TEST_TABLE_NAME = "NewTable";
     public static final String CourseTableName = "CourseData";
     public static final String UserTableName = "UserData";
     public static final String PlayedGameTableName = "GameData";
-
-    public static final String BUCKET_NAME = "disprofilepicture";
-
-    // Message types sent from the BluetoothChatService Handler
-    public static final int MESSAGE_STATE_CHANGE = 1;
-    public static final int MESSAGE_READ = 2;
-    public static final int MESSAGE_WRITE = 3;
-    public static final int MESSAGE_DEVICE_NAME = 4;
-    public static final int MESSAGE_TOAST = 5;
-
-    // Key names received from the BluetoothChatService Handler
-    public static final String DEVICE_NAME = "device_name";
-    public static final String TOAST = "toast";
-
 
 }

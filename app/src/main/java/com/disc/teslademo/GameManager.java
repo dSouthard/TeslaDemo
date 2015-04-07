@@ -575,8 +575,7 @@ public class GameManager extends FragmentActivity
 
      private void incomingDataPoints(String inputString) {   // method to deal with received data
          switch (inputString) {
-             case "Ready":
-                 // Disc is checking if connection is ready
+             case "R": // Disc is checking if connection is ready
                  sendMessage(inputString);
                  break;
              default:
