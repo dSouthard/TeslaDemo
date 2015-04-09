@@ -77,7 +77,7 @@ public class GameManager extends FragmentActivity
     List<Double> plotPoints = new ArrayList<>();
      MapperPlayedGame currentGame;
      MapperCourse course;
-    double lastGPS = 0.0;
+    double lastGPS = 0.00;
     String receivedMessage;
     boolean messageInProgress = false;
     int numberOfMessageTries = 0;
