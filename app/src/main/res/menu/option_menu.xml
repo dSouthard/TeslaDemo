@@ -32,7 +32,11 @@
     <item
         android:id="@+id/nightMode"
         android:icon="@android:drawable/ic_menu_save"
-        android:title="Turn On Night Mode" />
+        android:title=" Night Mode" />
+    <item
+        android:id="@+id/directionsToTeePad"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Directions to the Next Tee-Pad " />
     <item
         android:id="@+id/exitGame"
         android:icon="@android:drawable/ic_menu_save"

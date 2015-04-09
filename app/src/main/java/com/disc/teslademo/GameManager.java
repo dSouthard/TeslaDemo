@@ -38,7 +38,9 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.sql.Timestamp;
@@ -79,6 +81,7 @@ public class GameManager extends FragmentActivity
     String receivedMessage;
     boolean messageInProgress = false;
     int numberOfMessageTries = 0;
+    Polyline tracker, trajectoryLine;
     // Name of the connected device
     private String mConnectedDeviceName = null;
     // The Handler that gets information back from the BluetoothService
@@ -119,7 +122,7 @@ public class GameManager extends FragmentActivity
                  case MESSAGE_READ:
                      byte[] readBuf = (byte[]) msg.obj;
                      String readMessage = new String(readBuf, 0, msg.arg1); // construct a string from the valid bytes in the buffer
-                     textView.setText(readMessage);
+                     Log.d(TAG, readMessage);
                      incomingDataPoints(readMessage);
                      break;
                  case MESSAGE_DEVICE_NAME:
@@ -136,13 +139,13 @@ public class GameManager extends FragmentActivity
      };
      private BluetoothAdapter mBluetoothAdapter = null;
     private TextView textView, totalGameStrokes, currentBasketNumber, currentBasketPar, currenBasketStrokes;  // Used to view input from bt
-     private boolean mEnablingBT;
+    private boolean mEnablingBT, findingDisc = false, inNightMode = false;
      private boolean mLocalEcho = false;
      private boolean mAllowInsecureConnections = true;
      private int mOutgoingEoL_0D = 0x0D;
      private int mOutgoingEoL_0A = 0x0A;
      // Menu Variables
-     private MenuItem updateBasket, updateTeepad, exitGame, mMenuItemConnect;
+     private MenuItem teepadDirections, updateBasket, updateTeepad, exitGame, mMenuItemConnect, findMyDisc, nightMode;
      private boolean updated = false;
      private LocationRequest mLocationRequest;
      private Location lastLocation;
@@ -150,9 +153,11 @@ public class GameManager extends FragmentActivity
      private Boolean mRequestingLocationUpdates;
      private String mLastUpdateTime;
      private MapFragment gameMap;
-     private PolylineOptions polylineOptions;
-    private boolean basketConfirmation = false;
+    private PolylineOptions nextTeePadLineOptions;
+    private boolean basketConfirmation = false, tracking = false;
     private int currentPar = 0, currentStroke = 0, totalStrokeCount = 0, totalHoles;
+    private Marker discMarker;
+    private Button directionsBttn;
 
      /**
       * *********************************** Call Asynch Task Methods *********************
@@ -183,7 +188,8 @@ public class GameManager extends FragmentActivity
          setContentView(R.layout.activity_game_manager);
 
          // Setup Text Views
-         textView = (TextView) findViewById(R.id.textView);
+         textView = new TextView(this);
+         textView.setVisibility(View.INVISIBLE);
          courseName = (TextView) findViewById(R.id.courseName);
          pairedDeviceText = (TextView) findViewById(R.id.pairedDeviceText);
          totalGameStrokes = (TextView) findViewById(R.id.totalGameStrokesField);
@@ -239,9 +245,11 @@ public class GameManager extends FragmentActivity
          currentGame.setgameId(sdf.toString());
 
          //  Trajectory Setup
-         polylineOptions = new PolylineOptions(); // Instantiating the class PolylineOptions to plot polyline in the map
-         polylineOptions.color(Color.RED); // Setting the color of the polyline
-         polylineOptions.width(7); // Setting the width of the polyline
+
+
+         nextTeePadLineOptions = new PolylineOptions(); // Instantiating the class PolylineOptions to plot polyline in the map
+         nextTeePadLineOptions.color(Color.BLUE); // Setting the color of the polyline
+         nextTeePadLineOptions.width(7); // Setting the width of the polyline
 
          // Buttons
          Button exitGameBttn = (Button) findViewById(R.id.endGameBttn);
@@ -260,7 +268,19 @@ public class GameManager extends FragmentActivity
              }
          });
 
+         directionsBttn = (Button) findViewById(R.id.directionsBttn);
+         directionsBttn.setVisibility(View.INVISIBLE);
+         directionsBttn.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                 Log.d(TAG, "directionsBttn pressed");
+//                 trajectoryLine.setVisible(true);     // turn
+                 nextTeePadLineOptions.visible(false);  // hide button
+                 tracking = false;  // don't update polyline anymore
+             }
+         });
+
          updateDisplay();
+
      }
 
     private void saveAndExitGameDialog() {
@@ -271,16 +291,27 @@ public class GameManager extends FragmentActivity
         currentGame.setTotalStrokes(totalStrokeCount);
         currentGame.setLikes(0);
         // All other saved info should be up to date, ready to push to server
-
         saveGameData();
+
+        double[] points = new double[plotPoints.size()];
+        for (int i = 0; i < plotPoints.size(); i++) {
+            points[i] = plotPoints.get(i);
+        }
 
         // Show exit dialog
         Log.d(TAG, "Showing game results");
-        GameSummaryDialog dialog = new GameSummaryDialog(this, currentGame);
-        while (dialog.isShowing()) {
-            // Wait until dialog is closed
-        }
+        GameSummaryDialog dialog = GameSummaryDialog.newInstance(
+                currentGame.getGameLocation(),
+                currentGame.getTotalStrokes(),
+                points,
+                currentGame.getTotalHoles(),
+                (ArrayList<Integer>) currentGame.getHoleStrokes()
+        );
+        dialog.show(getFragmentManager(), "game_summary_message");
 
+        while (dialog.isVisible()) {
+
+        }
         // After dialog is dismissed, return to NewsFeed
         finish();
     }
@@ -435,7 +466,8 @@ public class GameManager extends FragmentActivity
             AlertDialog locationAlert = locationAlertBuilder.create();
             locationAlert.show();
         }
-     }
+
+    }
 
     /**
      * ****************************************** Bluetooth methods ***
@@ -552,12 +584,12 @@ public class GameManager extends FragmentActivity
          //**************** Add basket/tee-pad markers
          for (int i = 0; i < course.getBasketLatitudes().size(); i++) {
              gameMap.getMap().addMarker(new MarkerOptions()
-                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.basket_icon)) // basket
+                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.disc_golf)) // basket
                      .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
                      .position(new LatLng(course.getABasketLatitude(i), course.getABasketLongitude(i))));
 
              gameMap.getMap().addMarker(new MarkerOptions()
-                     //.icon(BitmapDescriptorFactory.fromResource(R.drawable.)) // basket
+                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_launcher)) // basket
                      .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
                      .position(new LatLng(course.getATpadLatitude(i), course.getATpadLongitude(i))));
          }
@@ -627,6 +659,34 @@ public class GameManager extends FragmentActivity
             gameMap.getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
             updated = true;
         }
+
+        if (tracking) {
+            if (tracker != null)
+                tracker.remove();
+            nextTeePadLineOptions = new PolylineOptions();
+            nextTeePadLineOptions.color(Color.BLUE); // Setting the color of the polyline
+            nextTeePadLineOptions.width(7); // Setting the width of the polyline
+            nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+            nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
+            tracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
+            tracker.setVisible(true);
+        }
+    }
+
+    private void InitiateFindMyDisc() {
+        findingDisc = true;
+        sendMessage("F");
+    }
+
+    private void ToggleNightMode() {
+        inNightMode = !inNightMode;
+        if (inNightMode) {
+            sendMessage("N");
+            nightMode.setTitle("Turn Off Night Mode");
+        } else {
+            sendMessage("D");
+            nightMode.setTitle("Turn On Night Mode");
+        }
     }
 
     private void incomingDataPoints(String inputString) {   // method to deal with received data
@@ -635,118 +695,146 @@ public class GameManager extends FragmentActivity
                  sendMessage(inputString);
                  break;
              case "F": //    Disc was in Find My Disc mode
+                 if (discMarker != null)
+                     discMarker.remove();   // remove disc marker
+//                 trajectoryLine.setVisible(true); // replace plotted trajectory
                  break;
              default:       // Receiving GPS points
-                 String[] result = inputString.split(",");
-                 int mLength = result.length;
+                 if (findingDisc) {
+//                     trajectoryLine.setVisible(false);    // temporarily hide plotted trajectory
+                     String[] result = inputString.split(",");
+                     int mLength = result.length;
 
-                 // Check if a new string has been started
-                 if (mLength > 0 && result[0].equals("S")) {
-                     Log.d(TAG, "String Started");
-
-                     // Check if entire string has been received
-                     if (result[mLength - 1].equals("E")) { // String has correct ending
-                         Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
-                         messageInProgress = false;
-                         numberOfMessageTries = 0;
-                         int doubleSize = mLength - 2;  // Ignore the last 1 of original message (E)
-
-                         // Check if EOH was also received
-                         if (result[mLength - 2].equals("EOH")) {
-                             Log.d(TAG, "Received EOH signal");
-                             nextBasket(); // Update values in TextViews
-                             doubleSize = mLength - 3;  // Ignore the last 2 of original message (EOH and E)
+                     // Parse out doubles into GPSinput array
+                     double[] GPSinput = new double[mLength];
+                     for (int z = 0; z < mLength; z++) {
+                         try {
+                             GPSinput[z] = Double.parseDouble(result[z]);   // Ignore the first one of original message (S)
+                             Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
+                         } catch (NumberFormatException nfex) {
+                             Log.d(TAG, "Bad Input: " + result[z]);
                          }
-
-                         // Parse out doubles into GPSinput array
-                         double[] GPSinput = new double[doubleSize];
-                         for (int z = 0; z < doubleSize; z++) {
-                             try {
-                                 GPSinput[z] = Double.parseDouble(result[z + 1]);   // Ignore the first one of original message (S)
-                                 Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
-                             } catch (NumberFormatException nfex) {
-                                 Log.d(TAG, "Bad Input: " + result[z + 1]);
-                             }
-                             if (z == doubleSize)
-                                 break;    // For some reason, the for loop wasn't working, needed this extra check
-                         }
-
-                         // Doubles parsed, ready to filter and add points to the map
-                         Log.d(TAG, "Ready to filter");
-                         if (GPSinput[0] != lastGPS) {  // In case message was sent multiple times
-                             filterInput(GPSinput);
-                             lastGPS = GPSinput[0];
-                             currentStroke++;           // Increment stroke counts
-                             totalStrokeCount++;
-                             Log.d(TAG, "Adding new points");
-                         } else {
-                             Log.d(TAG, "Received duplicate points.");
-                         }
+                         if (z == mLength)
+                             break;    // For some reason, the for loop wasn't working, needed this extra check
                      }
 
-                     // String wasn't sent in 1 message, will need to append additional points
-                     else {
-                         Log.d(TAG, "Bad end string, starting to wait for additional messages");
-                         receivedMessage = inputString; // Save portion of received points
-                         messageInProgress = true;
-                         numberOfMessageTries++;        // Only attempt to add 5 messages together
-                     }
-                 }
+                     discMarker = gameMap.getMap().addMarker(new MarkerOptions()
+                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.disc)) // basket
+                             .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
+                             .position(new LatLng(GPSinput[0], GPSinput[1])));
+                 } else {
+                     String[] result = inputString.split(",");
+                     int mLength = result.length;
 
-                 // Check to see if a string is in progress of being fully received
-                 else if (messageInProgress) {  /// Currently putting string together
-                     Log.d(TAG, "*************** APPENDING MESSAGES");
-                     receivedMessage += inputString;    // Add current
-                     String[] appendedResults = receivedMessage.split(",");
-                     mLength = appendedResults.length;
+                     // Check if a new string has been started
+                     if (mLength > 0 && result[0].equals("S")) {
+                         Log.d(TAG, "String Started");
 
-                     // Check to see if full string has finally been received
-                     if (mLength > 0 && appendedResults[mLength - 1].equals("E")) {
-                         // Completed new string
-                         Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
-                         messageInProgress = false;
-                         numberOfMessageTries = 0;
-                         int doubleSize = mLength - 2;
-
-                         // Check to see if EOH signal was received
-                         if (appendedResults[mLength - 2].equals("EOH")) {
-                             Log.d(TAG, "Received EOH signal");
-                             nextBasket();
-                             doubleSize = mLength - 3;
-                         }
-
-                         // Parse doubles
-                         double[] GPSinput = new double[doubleSize];
-                         for (int z = 0; z < doubleSize; z++) {
-                             try {
-                                 GPSinput[z] = Double.parseDouble(appendedResults[z + 1]);
-                                 Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
-                             } catch (NumberFormatException nfex) {
-                                 Log.d(TAG, "Bad Input: " + appendedResults[z + 1]);
-                             }
-                             if (z == doubleSize) break;
-                         }
-
-                         // Ready to add GPS points to the map
-                         Log.d(TAG, "Ready to filter");
-                         if (GPSinput[0] != lastGPS) {
-                             filterInput(GPSinput);
-                             lastGPS = GPSinput[0];
-                             currentStroke++;
-                             totalStrokeCount++;
-                             Log.d(TAG, "Adding new points");
-                         } else {
-                             Log.d(TAG, "Received duplicate points.");
-                         }
-                     } else {
-                         // Still need to complete string
-                         receivedMessage += inputString;    // Add new input to currently compiled incomplete string
-                         numberOfMessageTries++;
-                         messageInProgress = true;          // Set flag to continue waiting for additional input
-                         if (numberOfMessageTries > 5) { // Took too many tries to get message, abort
+                         // Check if entire string has been received
+                         if (result[mLength - 1].equals("E")) { // String has correct ending
+                             Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
                              messageInProgress = false;
+                             numberOfMessageTries = 0;
+                             int doubleSize = mLength - 2;  // Ignore the last 1 of original message (E)
+
+                             // Check if EOH was also received
+                             if (result[mLength - 2].equals("EOH")) {
+                                 Log.d(TAG, "Received EOH signal");
+                                 nextBasket(); // Update values in TextViews
+                                 doubleSize = mLength - 3;  // Ignore the last 2 of original message (EOH and E)
+                             }
+
+                             // Parse out doubles into GPSinput array
+                             double[] GPSinput = new double[doubleSize];
+                             for (int z = 0; z < doubleSize; z++) {
+                                 try {
+                                     GPSinput[z] = Double.parseDouble(result[z + 1]);   // Ignore the first one of original message (S)
+                                     Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
+                                 } catch (NumberFormatException nfex) {
+                                     Log.d(TAG, "Bad Input: " + result[z + 1]);
+                                 }
+                                 if (z == doubleSize)
+                                     break;    // For some reason, the for loop wasn't working, needed this extra check
+                             }
+
+                             // Doubles parsed, ready to filter and add points to the map
+                             Log.d(TAG, "Ready to filter");
+                             if (GPSinput[0] != lastGPS) {  // In case message was sent multiple times
+                                 filterInput(GPSinput);
+                                 lastGPS = GPSinput[0];
+                                 currentStroke++;           // Increment stroke counts
+                                 totalStrokeCount++;
+                                 Log.d(TAG, "Adding new points");
+                             } else {
+                                 Log.d(TAG, "Received duplicate points.");
+                             }
                          }
-                         Log.d(TAG, "Appending new message, still need more");
+
+                         // String wasn't sent in 1 message, will need to append additional points
+                         else {
+                             Log.d(TAG, "Bad end string, starting to wait for additional messages");
+                             receivedMessage = inputString; // Save portion of received points
+                             messageInProgress = true;
+                             numberOfMessageTries++;        // Only attempt to add 5 messages together
+                         }
+                     }
+
+
+                     // Check to see if a string is in progress of being fully received
+                     else if (messageInProgress) {  /// Currently putting string together
+                         Log.d(TAG, "*************** APPENDING MESSAGES");
+                         receivedMessage += inputString;    // Add current
+                         String[] appendedResults = receivedMessage.split(",");
+                         mLength = appendedResults.length;
+
+                         // Check to see if full string has finally been received
+                         if (mLength > 0 && appendedResults[mLength - 1].equals("E")) {
+                             // Completed new string
+                             Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
+                             messageInProgress = false;
+                             numberOfMessageTries = 0;
+                             int doubleSize = mLength - 2;
+
+                             // Check to see if EOH signal was received
+                             if (appendedResults[mLength - 2].equals("EOH")) {
+                                 Log.d(TAG, "Received EOH signal");
+                                 nextBasket();
+                                 doubleSize = mLength - 3;
+                             }
+
+                             // Parse doubles
+                             double[] GPSinput = new double[doubleSize];
+                             for (int z = 0; z < doubleSize; z++) {
+                                 try {
+                                     GPSinput[z] = Double.parseDouble(appendedResults[z + 1]);
+                                     Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
+                                 } catch (NumberFormatException nfex) {
+                                     Log.d(TAG, "Bad Input: " + appendedResults[z + 1]);
+                                 }
+                                 if (z == doubleSize) break;
+                             }
+
+                             // Ready to add GPS points to the map
+                             Log.d(TAG, "Ready to filter");
+                             if (GPSinput[0] != lastGPS) {
+                                 filterInput(GPSinput);
+                                 lastGPS = GPSinput[0];
+                                 currentStroke++;
+                                 totalStrokeCount++;
+                                 Log.d(TAG, "Adding new points");
+                             } else {
+                                 Log.d(TAG, "Received duplicate points.");
+                             }
+                         } else {
+                             // Still need to complete string
+                             receivedMessage += inputString;    // Add new input to currently compiled incomplete string
+                             numberOfMessageTries++;
+                             messageInProgress = true;          // Set flag to continue waiting for additional input
+                             if (numberOfMessageTries > 5) { // Took too many tries to get message, abort
+                                 messageInProgress = false;
+                             }
+                             Log.d(TAG, "Appending new message, still need more");
+                         }
                      }
                  }
 
@@ -764,12 +852,17 @@ public class GameManager extends FragmentActivity
          points = trajectory.mapTrajectory();
 
          // Setting points of polyline
+
+         PolylineOptions polylineOptions = new PolylineOptions(); // Instantiating the class PolylineOptions to plot polyline in the map
+         polylineOptions.color(Color.RED); // Setting the color of the polyline
+         polylineOptions.width(7); // Setting the width of the polyline
+
          polylineOptions.addAll(points);
 
          // Adding the polyline to the map
          gameMap.getMap().addPolyline(polylineOptions);
 
-         // Polled GPS location from disc
+//         // Polled GPS location from disc
          for (int i = 0; i < GPSinput.length - 1; i = i + 2) {
              gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSinput[i], GPSinput[i + 1])));
          }
@@ -851,7 +944,20 @@ public class GameManager extends FragmentActivity
              mMenuItemConnect = menu.getItem(0);
              updateBasket = menu.getItem(1);
              updateTeepad = menu.getItem(2);
-             exitGame = menu.getItem(3);
+             findMyDisc = menu.getItem(3);
+             nightMode = menu.getItem(4);
+             if (inNightMode) {
+                 nightMode.setTitle("Turn Off Night Mode");
+             } else {
+                 nightMode.setTitle("Turn On Night Mode");
+             }
+             teepadDirections = menu.getItem(5);
+             if (tracking) {
+                 teepadDirections.setTitle("Turn OFF Directions to Next Tee-Pad");
+             } else {
+                 teepadDirections.setTitle("Turn ON directions to Next Tee-Pad");
+             }
+             exitGame = menu.getItem(6);
          }
          return true;
      }
@@ -883,6 +989,26 @@ public class GameManager extends FragmentActivity
                  return true;
              case R.id.exitGame:
                  exitGameEarlyDialog();
+                 return true;
+             case R.id.findMyDisc:
+                 InitiateFindMyDisc();
+                 return true;
+             case R.id.nightMode:
+                 ToggleNightMode();
+                 return true;
+             case R.id.directionsToTeePad:
+                 if (tracking) {
+                     teepadDirections.setTitle("Turn OFF Directions to Next Tee-Pad");
+                     tracker.remove();
+                     tracker.setVisible(false);
+                 } else {
+                     teepadDirections.setTitle("Turn ON directions to Next Tee-Pad");
+                     directionsBttn.setVisibility(View.VISIBLE);
+//                 nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+//                 nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
+//                 tracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
+                     tracking = true;
+                 }
                  return true;
          }
          return false;

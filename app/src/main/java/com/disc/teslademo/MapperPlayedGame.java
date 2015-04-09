@@ -56,10 +56,16 @@ public class MapperPlayedGame {
 
     @DynamoDBAttribute(attributeName = "HoleStrokes")
     public List<Integer> getHoleStrokes() {
+        if (holeStrokes == null) {
+            holeStrokes = new ArrayList<>();
+        }
         return holeStrokes;
     }
 
     public void setHoleStrokes(List<Integer> newholeStrokes) {
+        if (holeStrokes == null) {
+            holeStrokes = new ArrayList<>();
+        }
         if (!holeStrokes.isEmpty()) {
             holeStrokes.clear();
         }
@@ -67,6 +73,9 @@ public class MapperPlayedGame {
     }
 
     public boolean addHoleStroke(int position, int newHoleStroke) {
+        if (holeStrokes == null) {
+            holeStrokes = new ArrayList<>();
+        }
         if (holeStrokes.size() >= position) {
             holeStrokes.add(position, newHoleStroke);
             return true;
@@ -75,6 +84,9 @@ public class MapperPlayedGame {
     }
 
     public void changeHoleStroke(int holeStrokePosition, int newHoleStroke) {
+        if (holeStrokes == null) {
+            holeStrokes = new ArrayList<>();
+        }
         if (holeStrokes.isEmpty() || holeStrokes.size() < holeStrokePosition) return;
         holeStrokes.remove(holeStrokePosition);
         holeStrokes.add(holeStrokePosition, newHoleStroke);
@@ -105,18 +117,22 @@ public class MapperPlayedGame {
         plotPoints.addAll(newplotPoints);
     }
 
-    public void addHoleDistance(Double newplotPoints) {
+    public void addPlotPoint(Double newplotPoints) {
         if (plotPoints == null)
             plotPoints = new ArrayList<>();
         plotPoints.add(newplotPoints);
     }
 
-    public void replaceHoleDistance(int holeDistancePostion, Double replaceValue) {
+    public void replacePlotPoint(int holeDistancePostion, Double replaceValue) {
         if (plotPoints == null)
             plotPoints = new ArrayList<>();
         if (plotPoints.isEmpty() || plotPoints.size() < holeDistancePostion) return;
         plotPoints.remove(holeDistancePostion);
         plotPoints.add(holeDistancePostion, replaceValue);
+    }
+
+    public Double getPlotPoint(int plotPoint) {
+        return plotPoints.get(plotPoint);
     }
 
     @DynamoDBAttribute(attributeName = "Likes")

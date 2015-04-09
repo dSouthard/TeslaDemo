@@ -4,7 +4,8 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="10dp"
+    android:weightSum="1">
 
     <TextView
         android:id="@+id/textView9"
@@ -99,6 +100,14 @@
             android:textAppearance="?android:attr/textAppearanceLarge" />
 
     </GridLayout>
+
+    <fragment
+        android:id="@+id/dialogMapFragment"
+        android:name="com.google.android.gms.maps.MapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0.99" />
 
     <Button
         android:id="@+id/reviewEachHoleBttn"
