@@ -165,7 +165,9 @@ public class GameManager extends FragmentActivity
         new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_COURSE);
      }
 
-     public void loadGameData() { new DynamoDBManagerTask().execute(DynamoDBManagerType.LOAD_GAME);}
+    public void loadGameData() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.LOAD_GAME);
+    }
 
     public void saveCourse() {
         new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_COURSE);
@@ -897,7 +899,7 @@ public class GameManager extends FragmentActivity
      /**
       * *********************************** Inner Classes *****************************
       */
-      private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
+     private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
 
          private double distance(double lat1, double lon1, double lat2, double lon2) {
              double theta = lon1 - lon2;
