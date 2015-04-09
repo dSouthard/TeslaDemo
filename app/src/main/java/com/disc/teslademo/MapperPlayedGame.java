@@ -4,13 +4,14 @@ import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBAttribut
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBHashKey;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
-* Created by diana on 2/17/15.
-*/
+ * Created by diana on 2/17/15.
+ */
 
-@DynamoDBTable(tableName = Constants.UserTableName)
+@DynamoDBTable(tableName = Constants.PlayedGameTableName)
 public class MapperPlayedGame {
 
     // Hash and range
@@ -22,8 +23,9 @@ public class MapperPlayedGame {
     private String gameLocation;
     private int totalStrokes;
     private List<Integer> holeStrokes;
-    private List<Double> holeDistances;
+    private List<Double> plotPoints;
     private int likes;
+    private int totalHoles;
 
     @DynamoDBHashKey(attributeName = "GameID")
     public String getgameId() {
@@ -68,8 +70,7 @@ public class MapperPlayedGame {
         if (holeStrokes.size() >= position) {
             holeStrokes.add(position, newHoleStroke);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
@@ -88,27 +89,35 @@ public class MapperPlayedGame {
         gameLocation = newgameLocation;
     }
 
-//    @DynamoDBAttribute(attributeName = "HoleDistances")
-//    public List<Double> getHoleDistances() {
-//        return holeDistances;
-//    }
-//
-//    public void setHoleDistances(List<Double> newholeDistances) {
-//        if (!holeDistances.isEmpty()) {
-//            holeDistances.clear();
-//        }
-//        holeDistances.addAll(newholeDistances);
-//    }
+    @DynamoDBAttribute(attributeName = "PlotPoints")
+    public List<Double> getPlotPoints() {
+        if (plotPoints == null)
+            plotPoints = new ArrayList<>();
+        return plotPoints;
+    }
 
-//    public void addHoleDistance(Double newholeDistances) {
-//        holeDistances.add(newholeDistances);
-//    }
-//
-//    public void replaceHoleDistance(int holeDistancePostion, Double replaceValue){
-//        if(holeDistances.isEmpty() || holeDistances.size() < holeDistancePostion) return;
-//        holeDistances.remove(holeDistancePostion);
-//        holeDistances.add(holeDistancePostion, replaceValue);
-//    }
+    public void setPlotPoints(List<Double> newplotPoints) {
+        if (plotPoints == null)
+            plotPoints = new ArrayList<>();
+        if (!plotPoints.isEmpty()) {
+            plotPoints.clear();
+        }
+        plotPoints.addAll(newplotPoints);
+    }
+
+    public void addHoleDistance(Double newplotPoints) {
+        if (plotPoints == null)
+            plotPoints = new ArrayList<>();
+        plotPoints.add(newplotPoints);
+    }
+
+    public void replaceHoleDistance(int holeDistancePostion, Double replaceValue) {
+        if (plotPoints == null)
+            plotPoints = new ArrayList<>();
+        if (plotPoints.isEmpty() || plotPoints.size() < holeDistancePostion) return;
+        plotPoints.remove(holeDistancePostion);
+        plotPoints.add(holeDistancePostion, replaceValue);
+    }
 
     @DynamoDBAttribute(attributeName = "Likes")
     public int getLikes() {
@@ -134,6 +143,15 @@ public class MapperPlayedGame {
 
     public void setTotalStrokes(int newStrokes) {
         totalStrokes = newStrokes;
+    }
+
+    @DynamoDBAttribute(attributeName = "TotalHoles")
+    public int getTotalHoles() {
+        return totalHoles;
+    }
+
+    public void setTotalHoles(int newHoles) {
+        totalHoles = newHoles;
     }
 
 }

@@ -13,18 +13,9 @@ import java.util.List;
 @DynamoDBTable(tableName = Constants.CourseTableName)
 public class MapperCourse {
 
+    static public final int MAX_NUMBER_OF_HOLES = 18;
     private String courseName;
     private String courseId;
-
-    static public final int MAX_NUMBER_OF_HOLES = 18;
-
-    // Baskets and Teepads
-//    private double basketLatitude;
-//    private double basketLongtidude;
-//    private double par;
-//    private double tpadLatitude;
-//    private double tpadLongitude;
-
     private List<Double> basketLatitudes;
     private List<Double> basketLongitudes;
     private List<Double> tpadLatitudes;
@@ -35,25 +26,15 @@ public class MapperCourse {
     private double courseWest;
 
 
-    MapperCourse() {    // Constructor
-        courseName = null;
-        courseId = null;
-        basketLatitudes = new ArrayList<>();
-        basketLongitudes = new ArrayList<>();
-        tpadLatitudes = new ArrayList<>();
-        tpadLongitudes = new ArrayList<>();
-        basketPars = new ArrayList<>();
-    }
-
-    public void setCourse(MapperCourse temp) {
-        courseId = temp.getCourseId();
-        courseName = temp.getCourseName();
-//        basketLatitude = temp.getBLat();
-//        basketLongtidude = temp.getBLong();
-//        tpadLatitude = temp.getLat();
-//        tpadLongitude = temp.getLong();
-//        par = temp.getPar();
-    }
+//    MapperCourse() {    // Constructor
+//        courseName = null;
+//        courseId = null;
+//        basketLatitudes = new ArrayList<>();
+//        basketLongitudes = new ArrayList<>();
+//        tpadLatitudes = new ArrayList<>();
+//        tpadLongitudes = new ArrayList<>();
+//        basketPars = new ArrayList<>();
+//    }
 
     @DynamoDBHashKey(attributeName = "CourseID")
     public String getCourseId() {
@@ -75,50 +56,15 @@ public class MapperCourse {
         return;
     }
 
-//    @DynamoDBAttribute(attributeName = "BasketLatitude")
-//    public double getBLat() {return basketLatitude;}
-//    public void setBLat(double newValue) {basketLatitude = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "BasketLongitude")
-//    public double getBLong() {return basketLongtidude;}
-//    public void setBLong(double newValue) {basketLongtidude = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "Par")
-//    public double getPar() {return par;}
-//    public void setPar(double newValue) {par = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "TPadLatitude")
-//    public double getLat() {return tpadLatitude;}
-//    public void setLat(double newValue) {tpadLatitude = newValue;}
-//
-//    @DynamoDBAttribute(attributeName = "TPadLongitude")
-//    public double getLong() {return tpadLongitude;}
-//    public void setLong(double newValue) {tpadLongitude = newValue;}
-
     @DynamoDBAttribute(attributeName = "BasketLatitude")
     public List<Double> getBasketLatitudes() {
         return basketLatitudes;
     }
 
-    public double getABasketLatitude(int listPosition){
-        return basketLatitudes.get(listPosition);
-    }
-
-    public boolean setABasketLatitude(int listPosition, double newLatitude){
-        if (basketLatitudes.size() > listPosition) {   // Check that list is long enough
-            basketLatitudes.remove(listPosition);
-            basketLatitudes.add(listPosition, newLatitude);
-            return true;
+    public boolean setBasketLatitudes(List<Double> newValues) {
+        if (basketLatitudes == null) {
+            basketLatitudes = new ArrayList<>();
         }
-        else if ((basketLatitudes.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
-            basketLatitudes.add(listPosition, newLatitude);
-            return true;
-        }
-        else
-            return false;
-    }
-
-    public boolean setAllBasketLatitudes(List<Double> newValues) {
         if (!basketLatitudes.isEmpty()) {
             basketLatitudes.clear();   // empty out the existing list
         }
@@ -126,31 +72,73 @@ public class MapperCourse {
         return true;
     }
 
+    public double getABasketLatitude(int listPosition) {
+        if (basketLatitudes == null) {
+            basketLatitudes = new ArrayList<>();
+        }
+        if (basketLatitudes.size() > listPosition)
+            return basketLatitudes.get(listPosition);
+        else
+            return 0;
+    }
+
+    public boolean setABasketLatitude(int listPosition, double newLatitude) {
+        if (basketLatitudes == null) {
+            basketLatitudes = new ArrayList<>();
+        }
+        if (basketLatitudes.isEmpty() && listPosition == 0) {
+            basketLatitudes.add(newLatitude);
+            return true;
+        } else {
+            if (basketLatitudes.size() > listPosition) {   // Check that list is long enough
+                basketLatitudes.remove(listPosition);
+                basketLatitudes.add(listPosition, newLatitude);
+                return true;
+            } else if ((basketLatitudes.size() == listPosition) && (listPosition < MAX_NUMBER_OF_HOLES)) {  // Add at end of list
+                basketLatitudes.add(listPosition, newLatitude);
+                return true;
+            } else
+                return false;
+        }
+    }
+
     @DynamoDBAttribute(attributeName = "BasketLongitude")
     public List<Double> getBasketLongitudes() {
-
+        if (basketLongitudes == null) {
+            basketLongitudes = new ArrayList<>();
+        }
         return basketLongitudes;
     }
 
-    public double getABasketLongitude(int listPosition){
-        return basketLongitudes.get(listPosition);
+    public double getABasketLongitude(int listPosition) {
+        if (basketLongitudes == null) {
+            basketLongitudes = new ArrayList<>();
+        }
+        if (basketLongitudes.size() > listPosition)
+            return basketLongitudes.get(listPosition);
+        else
+            return 0;
     }
 
-    public boolean setABasketLongitude(int listPosition, double newLongitude){
+    public boolean setABasketLongitude(int listPosition, double newLongitude) {
+        if (basketLongitudes == null) {
+            basketLongitudes = new ArrayList<>();
+        }
         if (basketLongitudes.size() > listPosition) {   // Check that list is long enough
             basketLongitudes.remove(listPosition);
             basketLongitudes.add(listPosition, newLongitude);
             return true;
-        }
-        else if ((basketLongitudes.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
+        } else if ((basketLongitudes.size() == listPosition) && (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
             basketLongitudes.add(listPosition, newLongitude);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    public boolean setAllBasketLongitudes(List<Double> newValues) {
+    public boolean setBasketLongitudes(List<Double> newValues) {
+        if (basketLongitudes == null) {
+            basketLongitudes = new ArrayList<>();
+        }
         if (!basketLongitudes.isEmpty()) {
             basketLongitudes.clear();   // empty out the existing list
         }
@@ -160,29 +148,41 @@ public class MapperCourse {
 
     @DynamoDBAttribute(attributeName = "BasketPar")
     public List<Double> getBasketPars() {
-
+        if (basketPars == null) {
+            basketPars = new ArrayList<>();
+        }
         return basketPars;
     }
 
-    public double getABasketPar(int listPosition){
-        return basketPars.get(listPosition);
+    public double getABasketPar(int listPosition) {
+        if (basketPars == null) {
+            basketPars = new ArrayList<>();
+        }
+        if (basketPars.size() > listPosition)
+            return basketPars.get(listPosition);
+        else
+            return 0;
     }
 
-    public boolean setABasketPar(int listPosition, double newPar){
+    public boolean setABasketPar(int listPosition, double newPar) {
+        if (basketLongitudes == null) {
+            basketLongitudes = new ArrayList<>();
+        }
         if (basketPars.size() > listPosition) {   // Check that list is long enough
             basketPars.remove(listPosition);
             basketPars.add(listPosition, newPar);
             return true;
-        }
-        else if ((basketPars.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
+        } else if ((basketPars.size() == listPosition) && (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
             basketPars.add(listPosition, newPar);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    public boolean setAllPars(List<Double> newValues) {
+    public boolean setBasketPars(List<Double> newValues) {
+        if (basketPars == null) {
+            basketPars = new ArrayList<>();
+        }
         if (!basketPars.isEmpty()) {
             basketPars.clear();   // empty out the existing list
         }
@@ -192,29 +192,41 @@ public class MapperCourse {
 
     @DynamoDBAttribute(attributeName = "TeepadLatitudes")
     public List<Double> getTpadLatitudes() {
-
+        if (tpadLatitudes == null) {
+            tpadLatitudes = new ArrayList<>();
+        }
         return tpadLatitudes;
     }
 
-    public double getATpadLatitude(int listPosition){
-        return tpadLatitudes.get(listPosition);
+    public double getATpadLatitude(int listPosition) {
+        if (tpadLatitudes == null) {
+            tpadLatitudes = new ArrayList<>();
+        }
+        if (tpadLatitudes.size() > listPosition)
+            return tpadLatitudes.get(listPosition);
+        else
+            return 0;
     }
 
-    public boolean setATpadLatitude(int listPosition, double newValue){
+    public boolean setATpadLatitude(int listPosition, double newValue) {
+        if (tpadLatitudes == null) {
+            tpadLatitudes = new ArrayList<>();
+        }
         if (tpadLatitudes.size() > listPosition) {   // Check that list is long enough
             tpadLatitudes.remove(listPosition);
             tpadLatitudes.add(listPosition, newValue);
             return true;
-        }
-        else if ((tpadLatitudes.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
+        } else if ((tpadLatitudes.size() == listPosition) && (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
             tpadLatitudes.add(listPosition, newValue);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    public boolean setAllTeePadLatitudes(List<Double> newValues) {
+    public boolean setTpadLatitudes(List<Double> newValues) {
+        if (tpadLatitudes == null) {
+            tpadLatitudes = new ArrayList<>();
+        }
         if (!tpadLatitudes.isEmpty()) {
             tpadLatitudes.clear();   // empty out the existing list
         }
@@ -224,29 +236,41 @@ public class MapperCourse {
 
     @DynamoDBAttribute(attributeName = "TeepadLongitudes")
     public List<Double> getTpadLongitudes() {
-
+        if (tpadLongitudes == null) {
+            tpadLongitudes = new ArrayList<>();
+        }
         return tpadLongitudes;
     }
 
-    public double getATpadLongitude(int listPosition){
-        return tpadLongitudes.get(listPosition);
+    public double getATpadLongitude(int listPosition) {
+        if (tpadLongitudes == null) {
+            tpadLongitudes = new ArrayList<>();
+        }
+        if (tpadLongitudes.size() > listPosition)
+            return tpadLongitudes.get(listPosition);
+        else
+            return 0;
     }
 
-    public boolean setATpadLongitude(int listPosition, double newValue){
+    public boolean setATpadLongitude(int listPosition, double newValue) {
+        if (tpadLongitudes == null) {
+            tpadLongitudes = new ArrayList<>();
+        }
         if (tpadLongitudes.size() > listPosition) {   // Check that list is long enough
             tpadLongitudes.remove(listPosition);
             tpadLongitudes.add(listPosition, newValue);
             return true;
-        }
-        else if ((tpadLongitudes.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
+        } else if ((tpadLongitudes.size() == listPosition) & (MAX_NUMBER_OF_HOLES > listPosition)) {  // Don't add outside 18 hole limit
             tpadLongitudes.add(listPosition, newValue);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    public boolean setAllTeePadLongitudes(List<Double> newValues) {
+    public boolean setTpadLongitudes(List<Double> newValues) {
+        if (tpadLongitudes == null) {
+            tpadLongitudes = new ArrayList<>();
+        }
         if (!tpadLongitudes.isEmpty()) {
             tpadLongitudes.clear();   // empty out the existing list
         }
@@ -254,5 +278,3 @@ public class MapperCourse {
         return true;
     }
 }
-
-

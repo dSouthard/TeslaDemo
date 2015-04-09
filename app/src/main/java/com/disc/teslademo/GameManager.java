@@ -26,8 +26,6 @@ import android.widget.Toast;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBScanExpression;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.PaginatedScanList;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -47,6 +45,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class GameManager extends FragmentActivity
          implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
@@ -73,24 +72,27 @@ public class GameManager extends FragmentActivity
      ArrayList<LatLng> points = new ArrayList<>();
      TrajectoryPlotter trajectory = new TrajectoryPlotter();
      LocationManager manager;
-     ArrayList<Double> inputPoints = new ArrayList<>();
+    List<Double> plotPoints = new ArrayList<>();
      MapperPlayedGame currentGame;
      MapperCourse course;
-     double lastGPS = 0;
-     // Name of the connected device
-     private String mConnectedDeviceName = null;
-     // The Handler that gets information back from the BluetoothService
-     private final Handler mHandlerBT = new Handler() {
-         @Override
-         public void handleMessage(Message msg) {
-             switch (msg.what) {
-                 case MESSAGE_STATE_CHANGE:
-                     switch (msg.arg1) {
-                         case BluetoothSerialService.STATE_CONNECTED:
-                             if (mMenuItemConnect != null) {
-                                 mMenuItemConnect.setIcon(android.R.drawable.ic_menu_close_clear_cancel);
-                                 mMenuItemConnect.setTitle(R.string.disconnect);
-                             }
+    double lastGPS = 0.0;
+    String receivedMessage;
+    boolean messageInProgress = false;
+    int numberOfMessageTries = 0;
+    // Name of the connected device
+    private String mConnectedDeviceName = null;
+    // The Handler that gets information back from the BluetoothService
+    private final Handler mHandlerBT = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MESSAGE_STATE_CHANGE:
+                    switch (msg.arg1) {
+                        case BluetoothSerialService.STATE_CONNECTED:
+                            if (mMenuItemConnect != null) {
+                                mMenuItemConnect.setIcon(android.R.drawable.ic_menu_close_clear_cancel);
+                                mMenuItemConnect.setTitle(R.string.disconnect);
+                            }
 
                              pairedDeviceText.setText(R.string.title_connected_to);
                              pairedDeviceText.append(" " + mConnectedDeviceName);
@@ -133,7 +135,7 @@ public class GameManager extends FragmentActivity
          }
      };
      private BluetoothAdapter mBluetoothAdapter = null;
-     private TextView textView;  // Used to view input from bt
+    private TextView textView, totalGameStrokes, currentBasketNumber, currentBasketPar, currenBasketStrokes;  // Used to view input from bt
      private boolean mEnablingBT;
      private boolean mLocalEcho = false;
      private boolean mAllowInsecureConnections = true;
@@ -144,38 +146,35 @@ public class GameManager extends FragmentActivity
      private boolean updated = false;
      private LocationRequest mLocationRequest;
      private Location lastLocation;
-     private TextView gameInfoText, courseName, pairedDeviceText;
+    private TextView courseName, pairedDeviceText;
      private Boolean mRequestingLocationUpdates;
      private String mLastUpdateTime;
      private MapFragment gameMap;
      private PolylineOptions polylineOptions;
-     private boolean haveSentConfirmation = false, basketConfirmation = false;
-     private double currentPar;
-     private int currentStroke = 0, totalStrokeCount = 0;
+    private boolean basketConfirmation = false;
+    private int currentPar = 0, currentStroke = 0, totalStrokeCount = 0, totalHoles;
 
      /**
       * *********************************** Call Asynch Task Methods *********************
       */
      public void saveGameData() {
-         new DynamoDBManagerTask().execute(DynamoDBManagerType.LOAD_GAME);
-     }
-
-     public void loadCourse() {
-         new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_COURSE);
-     }
-
-     public void loadGameData() {
          new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_GAME);
      }
 
-     public void saveCourse() {
-         new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_COURSE);
+    public void loadCourse() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_COURSE);
      }
 
-     /**
-      * *********************************************************************************
-      * Called when the activity is first created.
-      */
+     public void loadGameData() { new DynamoDBManagerTask().execute(DynamoDBManagerType.LOAD_GAME);}
+
+    public void saveCourse() {
+        new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_COURSE);
+    }
+
+    /**
+     * *********************************************************************************
+     * Called when the activity is first created.
+     */
      @Override
      public void onCreate(Bundle savedInstanceState) {
          super.onCreate(savedInstanceState);
@@ -183,9 +182,12 @@ public class GameManager extends FragmentActivity
 
          // Setup Text Views
          textView = (TextView) findViewById(R.id.textView);
-         gameInfoText = (TextView) findViewById(R.id.gameInfoText);
          courseName = (TextView) findViewById(R.id.courseName);
          pairedDeviceText = (TextView) findViewById(R.id.pairedDeviceText);
+         totalGameStrokes = (TextView) findViewById(R.id.totalGameStrokesField);
+         currentBasketPar = (TextView) findViewById(R.id.basketParField);
+         currenBasketStrokes = (TextView) findViewById(R.id.basketStrokeField);
+         currentBasketNumber = (TextView) findViewById(R.id.currentBasketField);
 
          // Setup Bluetooth
          mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -198,6 +200,7 @@ public class GameManager extends FragmentActivity
          // Automatically start up connection
          BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(getString(R.string.TeslaDiscAddress));
 //         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(getString(R.string.RNBTAddress));
+
          // Attempt to connect to the device
          mSerialService.connect(device);
 
@@ -216,61 +219,112 @@ public class GameManager extends FragmentActivity
          currentGame = new MapperPlayedGame();
 
          // Setup Game Info
-         //        loadCourse();
-         setupCourse();
-         currentBasket = 1;
-         gameInfoText.setText("Current Basket: " + currentBasket);
-         //        courseName.setText(MainActivity.course.getCourseName());
-         courseName.setText("Course Name");
-         //        if (course != null) currentPar = course.getABasketPar(0);
+         loadCourse();
+         while (course.getCourseName() == null) ;    // Wait for course to load
+         currentBasket = 0;
+         totalHoles = course.getBasketPars().size();
 
-         // MapperPlayedGame to save game data to server
-         //        loadCourse();
-         //        currentGame.setPlayedBy(MainActivity.currentUserName);
-         //        currentGame.setGameLocation(MainActivity.course.getCourseName());
+         courseName.setText(course.getCourseName());
+
+//         MapperPlayedGame to save game data to server
+         currentGame.setPlayedBy(MainActivity.currentUser.getUserName());
+         currentGame.setGameLocation(course.getCourseName());
 
          // Time stamp used as game ID
          Date date = new Date();
          Timestamp sdf = new Timestamp(date.getTime());
          currentGame.setGameDate(date.toString());
          currentGame.setgameId(sdf.toString());
-         currentGame.setLikes(0);
 
          //  Trajectory Setup
          polylineOptions = new PolylineOptions(); // Instantiating the class PolylineOptions to plot polyline in the map
          polylineOptions.color(Color.RED); // Setting the color of the polyline
          polylineOptions.width(7); // Setting the width of the polyline
 
-
-         // Test Button
-         Button sendButton = (Button) findViewById(R.id.send);
-         sendButton.setOnClickListener(new View.OnClickListener() {
+         // Buttons
+         Button exitGameBttn = (Button) findViewById(R.id.endGameBttn);
+         exitGameBttn.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                 sendMessage("Ok");
+                 Log.d(TAG, "exitGameBttn pressed");
+                 saveAndExitGameDialog();
              }
          });
+
+         Button nextBasketBttn = (Button) findViewById(R.id.nextBasketBttn);
+         nextBasketBttn.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                 Log.d(TAG, "nextBasketBttn pressed");
+                 nextBasket();
+             }
+         });
+
+         updateDisplay();
      }
 
-     /**
-      * ****************************************** App start/stop/resume/pause methods ***
-      */
+    private void saveAndExitGameDialog() {
+        Toast.makeText(this, "Exiting Game -> Need to implement save", Toast.LENGTH_LONG).show();
 
-     private void setupCourse() {
-         for (int i = 0; i < 18; i++) {
-             course.setABasketLongitude(i, 37.66);
-             course.setABasketLatitude(i, -105.77);
-             course.setABasketPar(i, 3);
-             course.setATpadLongitude(i, 36.66);
-             course.setATpadLatitude(i, -105.55);
-         }
-     }
+        // Add all compiled plot points
+        currentGame.setPlotPoints(plotPoints);
+        currentGame.setTotalStrokes(totalStrokeCount);
+        currentGame.setLikes(0);
+        // All other saved info should be up to date, ready to push to server
 
-     @Override
-     public void onStart() {
-         super.onStart();
-         mEnablingBT = false;
-         mGoogleApiClient.connect(); // Connect the Google Map client.
-     }
+        saveGameData();
+
+        // Show exit dialog
+        Log.d(TAG, "Showing game results");
+        GameSummaryDialog dialog = new GameSummaryDialog(this, currentGame);
+        while (dialog.isShowing()) {
+            // Wait until dialog is closed
+        }
+
+        // After dialog is dismissed, return to NewsFeed
+        finish();
+    }
+
+    private void nextBasket() {
+        Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
+        currentGame.addHoleStroke(currentBasket, currentStroke);  // save stroke count for basket
+        currentStroke = 0;                                        // reset stroke count for next hole
+
+        currentBasket++;
+        if (currentBasket >= MapperCourse.MAX_NUMBER_OF_HOLES) {
+            gameFinished();
+            Log.d(TAG, "Game successfully completed");
+            Toast.makeText(this, "Game successfully completed!", Toast.LENGTH_SHORT).show();
+        } else {
+            updateDisplay();   // show correct values on display
+        }
+    }
+
+    private void updateDisplay() {
+        currentPar = (int) course.getABasketPar(currentBasket);
+        totalGameStrokes.setText(String.valueOf(totalStrokeCount));     // Updated during incomingDataPoints
+        currentBasketNumber.setText(String.valueOf(currentBasket + 1)); // updated during nextBasket
+        currentBasketPar.setText(String.valueOf(currentPar));           // updated just now
+        currenBasketStrokes.setText(String.valueOf(currentStroke));     // updated during incomingDataPoints/nextBasket
+    }
+
+    /**
+     * ****************************************** App start/stop/resume/pause methods ***
+     */
+
+//     private void setupCourse() {
+//         for (int i = 0; i < 18; i++) {
+//             course.setABasketLongitude(i, 37.66);
+//             course.setABasketLatitude(i, -105.77);
+//             course.setABasketPar(i, 3);
+//             course.setATpadLongitude(i, 36.66);
+//             course.setATpadLatitude(i, -105.55);
+//         }
+//     }
+    @Override
+    public void onStart() {
+        super.onStart();
+        mEnablingBT = false;
+        mGoogleApiClient.connect(); // Connect the Google Map client.
+    }
 
      @Override
      public synchronized void onResume() {
@@ -331,62 +385,62 @@ public class GameManager extends FragmentActivity
              mSerialService.stop();
      }
 
-     @Override
-     public void onConnected(Bundle bundle) {
+    @Override
+    public void onConnected(Bundle bundle) {
 
-         mLocationRequest = new LocationRequest();
-         mLocationRequest = LocationRequest.create();
-         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-         mLocationRequest.setInterval(1000); // Update location every second
-         mLocationRequest.setFastestInterval(5000);
+        mLocationRequest = new LocationRequest();
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setInterval(1000); // Update location every second
+        mLocationRequest.setFastestInterval(5000);
 
-         LocationServices.FusedLocationApi.requestLocationUpdates(
-                 mGoogleApiClient, mLocationRequest, this);
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.i(TAG, "GoogleApiClient connection has been suspend");
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.i(TAG, "GoogleApiClient connection has failed");
+    }
+
+    private void setupLocationListener() {
+        manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            AlertDialog.Builder locationAlertBuilder = new AlertDialog.Builder(this);
+            locationAlertBuilder.setTitle("Location Not Enabled")
+                    .setMessage("Location Services are required for this application." +
+                            "Please check your settings and try again.")
+                    .setPositiveButton("Return to News Feed", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // if this button is clicked, close
+                            // current activity
+                            //                            numberOfTries = 0;
+                            finish();
+                        }
+                    })
+                    .setNegativeButton("Continue w/o Location", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // if this button is clicked, close
+                            // current activity
+                            dialog.dismiss();
+                        }
+                    });
+            AlertDialog locationAlert = locationAlertBuilder.create();
+            locationAlert.show();
+        }
      }
 
-     @Override
-     public void onConnectionSuspended(int i) {
-         Log.i(TAG, "GoogleApiClient connection has been suspend");
-     }
-
-     @Override
-     public void onConnectionFailed(ConnectionResult connectionResult) {
-         Log.i(TAG, "GoogleApiClient connection has failed");
-     }
-
-     private void setupLocationListener() {
-         manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-             AlertDialog.Builder locationAlertBuilder = new AlertDialog.Builder(this);
-             locationAlertBuilder.setTitle("Location Not Enabled")
-                     .setMessage("Location Services are required for this application." +
-                             "Please check your settings and try again.")
-                     .setPositiveButton("Return to News Feed", new DialogInterface.OnClickListener() {
-                         public void onClick(DialogInterface dialog, int id) {
-                             // if this button is clicked, close
-                             // current activity
-                             //                            numberOfTries = 0;
-                             finish();
-                         }
-                     })
-                     .setNegativeButton("Continue w/o Location", new DialogInterface.OnClickListener() {
-                         public void onClick(DialogInterface dialog, int id) {
-                             // if this button is clicked, close
-                             // current activity
-                             dialog.dismiss();
-                         }
-                     });
-             AlertDialog locationAlert = locationAlertBuilder.create();
-             locationAlert.show();
-         }
-     }
-
-     /**
-      * ****************************************** Bluetooth methods ***
-      */
-     private void updatePrefs() {
-         mSerialService.setAllowInsecureConnections(mAllowInsecureConnections);
-     }
+    /**
+     * ****************************************** Bluetooth methods ***
+     */
+    private void updatePrefs() {
+        mSerialService.setAllowInsecureConnections(mAllowInsecureConnections);
+    }
 
      public int getConnectionState() {
          return mSerialService.getState();
@@ -558,79 +612,143 @@ public class GameManager extends FragmentActivity
          updateAlert.show();
      }
 
-     @Override
-     public void onLocationChanged(Location location) {
-         lastLocation = location;
-         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-         updateUI();
-     }
+    @Override
+    public void onLocationChanged(Location location) {
+        lastLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        updateUI();
+    }
 
-     private void updateUI() {
-         if (!updated) {
-             LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-             gameMap.getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
-             updated = true;
-         }
-     }
+    private void updateUI() {
+        if (!updated) {
+            LatLng latLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+            gameMap.getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
+            updated = true;
+        }
+    }
 
-     private void incomingDataPoints(String inputString) {   // method to deal with received data
+    private void incomingDataPoints(String inputString) {   // method to deal with received data
          switch (inputString) {
              case "R": // Disc is checking if connection is ready
                  sendMessage(inputString);
                  break;
-             default:
+             case "F": //    Disc was in Find My Disc mode
+                 break;
+             default:       // Receiving GPS points
                  String[] result = inputString.split(",");
                  int mLength = result.length;
-                 if (mLength > 0 && result[0].equals("S")) { // Filter out incorrectly received messages
-                     Log.d(TAG, "Good start string");
-                     if (result[mLength - 1].equals("E")) {
-                         int doubleSize = mLength - 2;
-                         if (result[1].equals("EOH")) {
-                             // EOH results
-                             if (!basketConfirmation) {
-                                 currentGame.addHoleStroke(currentBasket - 1, currentStroke);
-                                 currentBasket++;
-                                 if (currentBasket >= MapperCourse.MAX_NUMBER_OF_HOLES) {
-                                     gameFinished();
-                                     Log.d(TAG, "Game successfully completed");
-                                 }
-                                 currentGame.addHoleStroke(currentBasket - 1, currentStroke);  // save stroke count
-                                 totalStrokeCount += currentStroke;
-                                 currentStroke = 0;  // reset stroke count for next hole
-                                 basketConfirmation = true;
-                                 Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
-                                 gameInfoText.setText("Current basket: " + currentBasket);
-                             }
+
+                 // Check if a new string has been started
+                 if (mLength > 0 && result[0].equals("S")) {
+                     Log.d(TAG, "String Started");
+
+                     // Check if entire string has been received
+                     if (result[mLength - 1].equals("E")) { // String has correct ending
+                         Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
+                         messageInProgress = false;
+                         numberOfMessageTries = 0;
+                         int doubleSize = mLength - 2;  // Ignore the last 1 of original message (E)
+
+                         // Check if EOH was also received
+                         if (result[mLength - 2].equals("EOH")) {
                              Log.d(TAG, "Received EOH signal");
-                             doubleSize = mLength - 3;
+                             nextBasket(); // Update values in TextViews
+                             doubleSize = mLength - 3;  // Ignore the last 2 of original message (EOH and E)
                          }
+
+                         // Parse out doubles into GPSinput array
                          double[] GPSinput = new double[doubleSize];
                          for (int z = 0; z < doubleSize; z++) {
                              try {
-                                 GPSinput[z] = Double.parseDouble(result[z + 1]);
+                                 GPSinput[z] = Double.parseDouble(result[z + 1]);   // Ignore the first one of original message (S)
                                  Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
                              } catch (NumberFormatException nfex) {
                                  Log.d(TAG, "Bad Input: " + result[z + 1]);
                              }
+                             if (z == doubleSize)
+                                 break;    // For some reason, the for loop wasn't working, needed this extra check
+                         }
+
+                         // Doubles parsed, ready to filter and add points to the map
+                         Log.d(TAG, "Ready to filter");
+                         if (GPSinput[0] != lastGPS) {  // In case message was sent multiple times
+                             filterInput(GPSinput);
+                             lastGPS = GPSinput[0];
+                             currentStroke++;           // Increment stroke counts
+                             totalStrokeCount++;
+                             Log.d(TAG, "Adding new points");
+                         } else {
+                             Log.d(TAG, "Received duplicate points.");
+                         }
+                     }
+
+                     // String wasn't sent in 1 message, will need to append additional points
+                     else {
+                         Log.d(TAG, "Bad end string, starting to wait for additional messages");
+                         receivedMessage = inputString; // Save portion of received points
+                         messageInProgress = true;
+                         numberOfMessageTries++;        // Only attempt to add 5 messages together
+                     }
+                 }
+
+                 // Check to see if a string is in progress of being fully received
+                 else if (messageInProgress) {  /// Currently putting string together
+                     Log.d(TAG, "*************** APPENDING MESSAGES");
+                     receivedMessage += inputString;    // Add current
+                     String[] appendedResults = receivedMessage.split(",");
+                     mLength = appendedResults.length;
+
+                     // Check to see if full string has finally been received
+                     if (mLength > 0 && appendedResults[mLength - 1].equals("E")) {
+                         // Completed new string
+                         Log.d(TAG, "*************** GOOD INPUT RECEIVED **************");
+                         messageInProgress = false;
+                         numberOfMessageTries = 0;
+                         int doubleSize = mLength - 2;
+
+                         // Check to see if EOH signal was received
+                         if (appendedResults[mLength - 2].equals("EOH")) {
+                             Log.d(TAG, "Received EOH signal");
+                             nextBasket();
+                             doubleSize = mLength - 3;
+                         }
+
+                         // Parse doubles
+                         double[] GPSinput = new double[doubleSize];
+                         for (int z = 0; z < doubleSize; z++) {
+                             try {
+                                 GPSinput[z] = Double.parseDouble(appendedResults[z + 1]);
+                                 Log.d(TAG, "GPS Point" + z + ": " + GPSinput[z]);
+                             } catch (NumberFormatException nfex) {
+                                 Log.d(TAG, "Bad Input: " + appendedResults[z + 1]);
+                             }
                              if (z == doubleSize) break;
                          }
+
+                         // Ready to add GPS points to the map
                          Log.d(TAG, "Ready to filter");
                          if (GPSinput[0] != lastGPS) {
                              filterInput(GPSinput);
                              lastGPS = GPSinput[0];
                              currentStroke++;
+                             totalStrokeCount++;
                              Log.d(TAG, "Adding new points");
                          } else {
                              Log.d(TAG, "Received duplicate points.");
                          }
-                         sendMessage("Ok");
+                     } else {
+                         // Still need to complete string
+                         receivedMessage += inputString;    // Add new input to currently compiled incomplete string
+                         numberOfMessageTries++;
+                         messageInProgress = true;          // Set flag to continue waiting for additional input
+                         if (numberOfMessageTries > 5) { // Took too many tries to get message, abort
+                             messageInProgress = false;
+                         }
+                         Log.d(TAG, "Appending new message, still need more");
                      }
-                     Log.d(TAG, "Bad end string");
-                     sendMessage("N");
-                 } else {
-                     Log.d(TAG, "Bad start string");
-                     sendMessage("N");
                  }
+
+                 // If string wasn't started correctly, or isn't in progress of being put together, disregard
                  break;
          }
      }
@@ -654,8 +772,11 @@ public class GameManager extends FragmentActivity
              gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSinput[i], GPSinput[i + 1])));
          }
 
-         haveSentConfirmation = false;   // prepare for next Ready signal
-         basketConfirmation = false;     // prepare for next EOH signal
+         // Keep track of plotted points
+         for (int i = 0; i < GPSinput.length; i++) {
+             Double temp = GPSinput[i];
+             plotPoints.add(temp);
+         }
      }
 
 
@@ -776,105 +897,7 @@ public class GameManager extends FragmentActivity
      /**
       * *********************************** Inner Classes *****************************
       */
-     class ByteQueue {
-         private byte[] mBuffer;
-         private int mHead;
-         private int mStoredBytes;
-
-         public ByteQueue(int size) {
-             mBuffer = new byte[size];
-         }
-
-         public int getBytesAvailable() {
-             synchronized (this) {
-                 return mStoredBytes;
-             }
-         }
-
-         public int read(byte[] buffer, int offset, int length)
-                 throws InterruptedException {
-             if (length + offset > buffer.length) {
-                 throw
-                         new IllegalArgumentException("length + offset > buffer.length");
-             }
-             if (length < 0) {
-                 throw
-                         new IllegalArgumentException("length < 0");
-
-             }
-             if (length == 0) {
-                 return 0;
-             }
-             synchronized (this) {
-                 while (mStoredBytes == 0) {
-                     wait();
-                 }
-                 int totalRead = 0;
-                 int bufferLength = mBuffer.length;
-                 boolean wasFull = bufferLength == mStoredBytes;
-                 while (length > 0 && mStoredBytes > 0) {
-                     int oneRun = Math.min(bufferLength - mHead, mStoredBytes);
-                     int bytesToCopy = Math.min(length, oneRun);
-                     System.arraycopy(mBuffer, mHead, buffer, offset, bytesToCopy);
-                     mHead += bytesToCopy;
-                     if (mHead >= bufferLength) {
-                         mHead = 0;
-                     }
-                     mStoredBytes -= bytesToCopy;
-                     length -= bytesToCopy;
-                     offset += bytesToCopy;
-                     totalRead += bytesToCopy;
-                 }
-                 if (wasFull) {
-                     notify();
-                 }
-                 return totalRead;
-             }
-         }
-
-         public void write(byte[] buffer, int offset, int length)
-                 throws InterruptedException {
-             if (length + offset > buffer.length) {
-                 throw
-                         new IllegalArgumentException("length + offset > buffer.length");
-             }
-             if (length < 0) {
-                 throw
-                         new IllegalArgumentException("length < 0");
-
-             }
-             if (length == 0) {
-                 return;
-             }
-             synchronized (this) {
-                 int bufferLength = mBuffer.length;
-                 boolean wasEmpty = mStoredBytes == 0;
-                 while (length > 0) {
-                     while (bufferLength == mStoredBytes) {
-                         wait();
-                     }
-                     int tail = mHead + mStoredBytes;
-                     int oneRun;
-                     if (tail >= bufferLength) {
-                         tail = tail - bufferLength;
-                         oneRun = mHead - tail;
-                     } else {
-                         oneRun = bufferLength - tail;
-                     }
-                     int bytesToCopy = Math.min(oneRun, length);
-                     System.arraycopy(buffer, offset, mBuffer, tail, bytesToCopy);
-                     offset += bytesToCopy;
-                     mStoredBytes += bytesToCopy;
-                     length -= bytesToCopy;
-                 }
-                 if (wasEmpty) {
-                     notify();
-                 }
-             }
-         }
-     }
-
-     private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
+      private class DynamoDBManagerTask extends AsyncTask<DynamoDBManagerType, Void, String> {
 
          private double distance(double lat1, double lon1, double lat2, double lon2) {
              double theta = lon1 - lon2;
@@ -909,52 +932,59 @@ public class GameManager extends FragmentActivity
              switch (types[0]) {
                  case GET_COURSE:
                      try {
-                         Log.d(TAG, "Loading all saved courses.....");
-                         // Retrieve all users from saved User Table, returned in undetermined order
-                         DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
-                         PaginatedScanList scanResult = mapper.scan(MapperCourse.class, scanExpression);
-                         ArrayList<MapperCourse> result = new ArrayList<>();
-                         result.addAll(scanResult);        // Change result to ArrayList
-                         Log.d(TAG, "Retrieved all saved courses, searching for nearest course.....");
-
-                         if (result.size() < 2) { // Only one course saved, return that course
-                             course = result.get(0);
-                             Log.d(TAG, "Only one course, loaded " + course.getCourseName());
-                         } else {  // Compare loaded courses to user's current location
-                             double distanceLog = -1;
-                             int useThisOne = 0;
-                             for (int i = 0; i < result.size() - 1; i++) {
-                                 double distanceTemp = distance(lastLocation.getLatitude(), lastLocation.getLongitude(),
-                                         result.get(i).getATpadLatitude(0), result.get(i).getATpadLongitude(0));
-                                 if (distanceLog == -1)
-                                     distanceLog = distanceTemp;  // Set up distance log
-                                 else if (distanceTemp < distanceLog) // found a course that's closer to the user
-                                     useThisOne = i; // keep track of which course is closest
-                             }
-
-                             course = result.get(useThisOne);
-                             Log.d(TAG, "Ran through courses, loaded " + course.getCourseName());
-                         }
-                         MapperCourse temp = mapper.load(MapperCourse.class, getString(R.string.courseID));
-                         course = temp;
+//                         Log.d(TAG, "Loading all saved courses.....");
+//                         // Retrieve all courses from saved User Table, returned in undetermined order
+//                         DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
+//                         PaginatedScanList scanResult = mapper.scan(MapperCourse.class, scanExpression);
+//                         ArrayList<MapperCourse> result = new ArrayList<>();
+//                         result.addAll(scanResult);        // Change result to ArrayList
+//                         Log.d(TAG, "Retrieved all saved courses, searching for nearest course.....");
+//
+//                         if (result.size() < 2) { // Only one course saved, return that course
+//                             course = result.get(0);
+//                             Log.d(TAG, "Only one course, loaded " + course.getCourseName());
+//                         } else {  // Compare loaded courses to user's current location
+//                             double distanceLog = -1;
+//                             int useThisOne = 0;
+//                             for (int i = 0; i < result.size() - 1; i++) {
+//                                 double distanceTemp = distance(lastLocation.getLatitude(), lastLocation.getLongitude(),
+//                                         result.get(i).getATpadLatitude(0), result.get(i).getATpadLongitude(0));
+//                                 if (distanceLog == -1)
+//                                     distanceLog = distanceTemp;  // Set up distance log
+//                                 else if (distanceTemp < distanceLog) // found a course that's closer to the user
+//                                     useThisOne = i; // keep track of which course is closest
+//                             }
+//
+//                             course = result.get(useThisOne);
+//                             Log.d(TAG, "Ran through courses, loaded " + course.getCourseName());
+//                         }
+                         course = mapper.load(MapperCourse.class, "Test");
+                         //TODO: Switch between saved courses
+//                         course = mapper.load(MapperCourse.class, "Test2");
+                         Log.d(TAG, "Course loaded " + course.getCourseName());
                      } catch (AmazonServiceException ex) {
                          Log.e(TAG, "Error loading course");
+                         Log.e(TAG, "Error: " + ex);
                      }
                      break;
                  case SAVE_COURSE:
                      try {
                          Log.d(TAG, "Saving course");
                          mapper.save(course);
+                         Log.e(TAG, "Course saved.");
                      } catch (AmazonServiceException ex) {
                          Log.e(TAG, "Error saving course");
+                         Log.e(TAG, "Error: " + ex);
                      }
                      break;
                  case SAVE_GAME:
                      try {
                          Log.d(TAG, "Saving game data");
                          mapper.save(currentGame);
+                         Log.d(TAG, "Game data saved");
                      } catch (AmazonServiceException ex) {
                          Log.e(TAG, "Error saving game data");
+                         Log.e(TAG, "Error: " + ex);
                      }
                      break;
              }
