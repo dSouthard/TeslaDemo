@@ -2,57 +2,46 @@ package com.disc.teslademo;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.graphics.Color;
-import android.location.LocationManager;
 import android.os.Bundle;
-import android.view.LayoutInflater;
+import android.support.v4.app.DialogFragment;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by diana on 4/9/15.
- */
 public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallback {
 
-    protected GoogleApiClient mGoogleApiClient;
-    ArrayList<LatLng> points = new ArrayList<>();
-    TrajectoryPlotter trajectory = new TrajectoryPlotter();
-    LocationManager manager;
-    List<Double> plotPoints = new ArrayList<>();
-    private MapperPlayedGame playedGame;
+    public static boolean visible = true;
+    ArrayAdapter<String> listAdapter;
     private Context context;
-    private MapFragment gameMap;
+    private SupportMapFragment gameMap;
     private PolylineOptions polylineOptions;
-
     private String courseName;
     private int totalStrokes, totalHoles;
-    private List<Integer> holeStrokes;
-
+    private ArrayList<String> wallList;
+    private LatLng startMap;
 
     public GameSummaryDialog() {
 
     }
 
-    public static final GameSummaryDialog newInstance(String courseName, int totalStrokes, double[] plots, int totalHoles, ArrayList<Integer> holeStrokes) {
+    public static GameSummaryDialog newInstance(String courseName, int totalStrokes,
+                                                double[] plots, int totalHoles, ArrayList<Integer> holeStrokes) {
         GameSummaryDialog dialog = new GameSummaryDialog();
-        Bundle bundle = new Bundle(2);
+        Bundle bundle = new Bundle(5);
         bundle.putString("courseName", courseName);
         bundle.putInt("totalStrokes", totalStrokes);
         bundle.putIntegerArrayList("holeStrokes", holeStrokes);
@@ -69,112 +58,97 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
         context = activity;
     }
 
-
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.reviewgame_summary_dialog, container);
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
         courseName = getArguments().getString("courseName");
         totalStrokes = getArguments().getInt("totalStrokes");
-        holeStrokes = getArguments().getIntegerArrayList("holeStrokes");
+        List<Integer> holeStrokes = getArguments().getIntegerArrayList("holeStrokes");
         totalHoles = getArguments().getInt("totalHoles");
-
         double[] plotPointsArray = getArguments().getDoubleArray("plotPoints");
 
+        TrajectoryPlotter trajectoryPlotter = new TrajectoryPlotter();
 
-        // Dialog textviews that need inputs
-        // Overall Summary
-        TextView gameSummaryCourseName = (TextView) view.findViewById(R.id.courseNameOverallSummary);
-        TextView avgStroke = (TextView) view.findViewById(R.id.avgStrokeperHoleSummary);
-        TextView totalStrokesSummary = (TextView) view.findViewById(R.id.totalStrokesSummary);
-        // Hole Summary
-
-        // Set text
-        gameSummaryCourseName.setText(courseName);
-        if (totalHoles != 0) avgStroke.setText(String.valueOf(totalStrokes / totalHoles));
-        else avgStroke.setText("Divide by zero");
-        totalStrokesSummary.setText(String.valueOf(totalStrokes));
-
-        // Dialog buttons
-        Button reviewHolesbttn = (Button) view.findViewById(R.id.reviewEachHoleBttn);
-        //you can change the button dimensions here
-        reviewHolesbttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //actions
-                final Dialog detailsDialog = new Dialog(context);   // Overall Summary
-                detailsDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-                detailsDialog.setContentView(R.layout.reviewgame_detail_dialog);
-                ListView wallFeed = (ListView) detailsDialog.findViewById(R.id.HoleListView);
-
-                ArrayList<String> wallList = new ArrayList<String>();
-                ArrayAdapter<String> listAdapter = new ArrayAdapter<>(context, R.layout.friend_name, wallList);
-                wallFeed.setAdapter(listAdapter);
-
-                // Add each hole info
-                for (int i = 0; i < holeStrokes.size(); i++) {
-                    StringBuilder summary = new StringBuilder();
-                    summary.append("Hole " + i);
-                    summary.append("\t");
-                    summary.append(" " + holeStrokes.get(i));
-                    if (holeStrokes.get(i) == 1)
-                        summary.append(" Stroke");
-                    else
-                        summary.append(" Strokes");
-                    wallList.add(summary.toString());
-                }
-                listAdapter.notifyDataSetChanged();
-
-                Button detailsDoneBttn = (Button) v.findViewById(R.id.detailsDoneButton);
-                detailsDoneBttn.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        //actions
-                        detailsDialog.dismiss();
-                    }
-                });
-
-                detailsDialog.show();
-
-            }
-        });
-
-        Button doneBttn = (Button) view.findViewById(R.id.reviewEachHoleBttn);
-        doneBttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //actions
-                dismiss();
-            }
-        });
-
-        // Setup map
+        // Set up polylines
         polylineOptions = new PolylineOptions(); // Instantiating the class PolylineOptions to plot polyline in the map
         polylineOptions.color(Color.RED); // Setting the color of the polyline
         polylineOptions.width(7); // Setting the width of the polyline
 
-        TrajectoryPlotter trajectoryPlotter = new TrajectoryPlotter();
         if (plotPointsArray.length > 0) {
             trajectoryPlotter.initData(plotPointsArray);
-            points = trajectoryPlotter.mapTrajectory();
+            ArrayList<LatLng> points = trajectoryPlotter.mapTrajectory();
             polylineOptions.addAll(points);
+
+            startMap = new LatLng(plotPointsArray[0], plotPointsArray[1]);  // Start map at beginning of throws
+        } else {  // Start map at beginning of course
+            startMap = new LatLng(0, 0);
         }
 
-        gameMap = (MapFragment) getFragmentManager()
-                .findFragmentById(R.id.dialogMapFragment);
-        gameMap.getMapAsync(this);
-        gameMap.getMap().addPolyline(polylineOptions);
-
-//        // Polled GPS location from disc
-//        for (int i = 0; i < GPSpoints.length - 1; i = i + 2) {
-//            gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSpoints[i], GPSpoints[i + 1])));
-//        }
-
-        return view;
+        // Set up hole summary
+        wallList = new ArrayList<>();
+        // Add each hole info
+        for (int i = 0; i < holeStrokes.size(); i++) {
+            StringBuilder summary = new StringBuilder();
+            summary.append("Hole ").append(i).append(": ");
+            summary.append("\t");
+            summary.append(" ").append(holeStrokes.get(i));
+            if (holeStrokes.get(i) == 1)
+                summary.append(" Stroke");
+            else
+                summary.append(" Strokes");
+            wallList.add(summary.toString());
+        }
+        listAdapter = new ArrayAdapter<>(context, R.layout.friend_name, wallList);
+        Dialog summary1 = new Dialog(context);
+        summary1.setContentView(R.layout.reviewgame_summary_dialog);
+        summary1 = configureDialogView(summary1);
+        visible = true;
+        return summary1;
     }
 
     @Override
     public void onMapReady(GoogleMap map) {
         map.setMyLocationEnabled(false);
         gameMap.getMap().setMapType(GoogleMap.MAP_TYPE_SATELLITE);
-//        imap.moveCamera(CameraUpdateFactory.newLatLngZoom(points.get(0),19f ));
+        gameMap.getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(startMap, 17f));
+
+    }
+
+    private Dialog configureDialogView(Dialog v) {
+        // Dialog textviews that need inputs
+        // Overall Summary
+        TextView gameSummaryCourseName = (TextView) v.findViewById(R.id.courseNameOverallSummary);
+        TextView avgStroke = (TextView) v.findViewById(R.id.avgStrokeperHoleSummary);
+        TextView totalStrokesSummary = (TextView) v.findViewById(R.id.totalStrokeGameSummaryDialog);
+        ListView wallFeed = (ListView) v.findViewById(R.id.holeSummaryList);
+
+        listAdapter = new ArrayAdapter<>(context, R.layout.friend_name, wallList);
+        wallFeed.setAdapter(listAdapter);
+        listAdapter.notifyDataSetChanged();
+
+        // Set text
+        gameSummaryCourseName.setText(courseName);
+        if (totalHoles != 0) avgStroke.setText(String.valueOf(totalStrokes / totalHoles));
+        else avgStroke.setText("0");
+        totalStrokesSummary.setText(String.valueOf(totalStrokes));
+
+        // Button
+        Button doneBttn = (Button) v.findViewById(R.id.doneButton);
+        doneBttn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //actions
+                visible = false;
+                dismiss();
+            }
+        });
+
+        // Setup map
+        gameMap = (SupportMapFragment) getFragmentManager().findFragmentById(R.id.dialogMapFragment);
+//        gameMap = (MapFragment) mapSupport;
+        gameMap.getMapAsync(this);
+        gameMap.getMap().addPolyline(polylineOptions);
+
+        return v;
     }
 }
