@@ -311,7 +311,7 @@ public class GameManager extends FragmentActivity
                      discTracker.remove();
                      findingDisc = false;
                  }
-                 nextBasketBttn.setVisibility(View.INVISIBLE);
+                 directionsBttn.setVisibility(View.INVISIBLE);
              }
          });
 
