@@ -34,6 +34,7 @@
         android:textAppearance="?android:attr/textAppearanceSmall" />
 
     <LinearLayout
+        android:id="@+id/"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -185,6 +186,30 @@
                     android:text="0"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
+            </TableRow>
+
+            <TableRow
+                android:id="@+id/"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent">
+
+                <TextView
+                    android:id="@+id/textView17"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_column="0"
+                    android:layout_row="6"
+                    android:text="Current Game Score: "
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
+
+                <TextView
+                    android:id="@+id/currentGameScoreTV"
+                    android:layout_width="221dp"
+                    android:layout_height="wrap_content"
+                    android:layout_column="5"
+                    android:layout_row="6"
+                    android:text="0"
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
             </TableRow>
 
         </TableLayout>

@@ -54,6 +54,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+
+// TODO: Add running Current Game Score: = current total strokes - running total of current pars up to the current basket
+
 public class GameManager extends FragmentActivity
          implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
          LocationListener, OnMapReadyCallback {
@@ -244,6 +247,9 @@ public class GameManager extends FragmentActivity
          }
          currentBasket = 0;
          totalHoles = course.getBasketPars().size();
+         currentGame.setTotalHoles(totalHoles);
+         TextView totalHolesTV = (TextView) findViewById(R.id.totalHoleDisplay);
+         totalHolesTV.setText(String.valueOf(totalHoles));
 
          int totalCourseParInt = 0;
          for (int i = 0; i < course.getBasketPars().size(); i++) {
@@ -925,9 +931,9 @@ public class GameManager extends FragmentActivity
          gameMap.getMap().addPolyline(polylineOptions);
 
 //         // Polled GPS location from disc
-         for (int i = 0; i < GPSinput.length - 1; i = i + 2) {
-             gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSinput[i], GPSinput[i + 1])));
-         }
+//         for (int i = 0; i < GPSinput.length - 1; i = i + 2) {
+//             gameMap.getMap().addMarker(new MarkerOptions().position(new LatLng(GPSinput[i], GPSinput[i + 1])));
+//         }
 
          // Keep track of plotted points
          for (double temp : GPSinput) {

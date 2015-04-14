@@ -128,9 +128,9 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
 
         // Set text
         gameSummaryCourseName.setText(courseName);
-        int avgStrokeInt = 0;
+        double avgStrokeInt = 0.0;
 //        if (totalHoles != 0)
-        avgStrokeInt = (totalStrokes / totalHoles);
+        avgStrokeInt = (double) totalStrokes / totalHoles;
         avgStroke.setText(String.valueOf(avgStrokeInt));
         totalStrokesSummary.setText(String.valueOf(totalStrokes));
         holeSummary.setText(textSummary);
