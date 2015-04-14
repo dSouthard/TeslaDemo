@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -33,6 +32,8 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
     private int totalStrokes, totalHoles;
     private ArrayList<String> wallList;
     private LatLng startMap;
+    private TextView holeSummary;
+    private String textSummary;
 
     public GameSummaryDialog() {
 
@@ -86,25 +87,26 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
         }
 
         // Set up hole summary
-        wallList = new ArrayList<>();
+        StringBuffer stringBuffer = new StringBuffer();
         // Add each hole info
         for (int i = 0; i < holeStrokes.size(); i++) {
-            StringBuilder summary = new StringBuilder();
-            summary.append("Hole ").append(i).append(": ");
-            summary.append("\t");
-            summary.append(" ").append(holeStrokes.get(i));
+            stringBuffer.append("Hole ").append(String.valueOf(i + 1)).append(": ");
+            stringBuffer.append("\t");
+            stringBuffer.append(" ").append(holeStrokes.get(i));
             if (holeStrokes.get(i) == 1)
-                summary.append(" Stroke");
+                stringBuffer.append(" Stroke");
             else
-                summary.append(" Strokes");
-            wallList.add(summary.toString());
+                stringBuffer.append(" Strokes");
+            stringBuffer.append(System.getProperty("line.separator"));
         }
-        listAdapter = new ArrayAdapter<>(context, R.layout.friend_name, wallList);
-        Dialog summary1 = new Dialog(context);
-        summary1.setContentView(R.layout.reviewgame_summary_dialog);
-        summary1 = configureDialogView(summary1);
+
+        textSummary = stringBuffer.toString();
+
+        Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.reviewgame_summary_dialog);
+        dialog = configureDialogView(dialog);
         visible = true;
-        return summary1;
+        return dialog;
     }
 
     @Override
@@ -121,17 +123,17 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
         TextView gameSummaryCourseName = (TextView) v.findViewById(R.id.courseNameOverallSummary);
         TextView avgStroke = (TextView) v.findViewById(R.id.avgStrokeperHoleSummary);
         TextView totalStrokesSummary = (TextView) v.findViewById(R.id.totalStrokeGameSummaryDialog);
-        ListView wallFeed = (ListView) v.findViewById(R.id.holeSummaryList);
+        TextView holeSummary = (TextView) v.findViewById(R.id.holeSummaryTextView);
 
-        listAdapter = new ArrayAdapter<>(context, R.layout.friend_name, wallList);
-        wallFeed.setAdapter(listAdapter);
-        listAdapter.notifyDataSetChanged();
 
         // Set text
         gameSummaryCourseName.setText(courseName);
-        if (totalHoles != 0) avgStroke.setText(String.valueOf(totalStrokes / totalHoles));
-        else avgStroke.setText("0");
+        int avgStrokeInt = 0;
+//        if (totalHoles != 0)
+        avgStrokeInt = (totalStrokes / totalHoles);
+        avgStroke.setText(String.valueOf(avgStrokeInt));
         totalStrokesSummary.setText(String.valueOf(totalStrokes));
+        holeSummary.setText(textSummary);
 
         // Button
         Button doneBttn = (Button) v.findViewById(R.id.doneButton);

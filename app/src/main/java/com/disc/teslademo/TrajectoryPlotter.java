@@ -269,7 +269,7 @@ public class TrajectoryPlotter {
         int count = 0;
 
         // Threshold
-        double K = 2.5;
+        double K = 15;
 
         for (i = 0; i < size1 - 3; i = i + 2) {
             avg_distance = avg_distance + Math.sqrt(Math.pow(unfilteredData[i + 2] - unfilteredData[i], 2) + Math.pow(unfilteredData[i + 3] - unfilteredData[i + 1], 2));
@@ -288,7 +288,7 @@ public class TrajectoryPlotter {
                 count = count + 1;
                 K = K * count;
             } else {
-                K = 2.5;
+                K = 15;
                 count = 1;
             }
         }

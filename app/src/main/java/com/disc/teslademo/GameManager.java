@@ -356,21 +356,16 @@ public class GameManager extends FragmentActivity
                 (ArrayList<Integer>) currentGame.getHoleStrokes()
         );
 
-
 //        resultDialog.show(getFragmentManager(), "dialog");
         FragmentManager fm = getFragmentManager();
 //        Create and show the dialog.
         resultDialog.show(fm, "dialog");
-//
-//        while (GameSummaryDialog.visible) {
-//
-//        }
-//        Toast.makeText(this, "invisible", Toast.LENGTH_LONG).show();
     }
 
     private void nextBasket() {
 //        Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
         currentGame.addHoleStroke(currentBasket, currentStroke);  // save stroke count for basket
+        currentGame.setTotalStrokes(totalStrokeCount);            // Keep total stroke count updated
         currentStroke = 0;                                        // reset stroke count for next hole
 
         currentBasket++;
@@ -754,6 +749,7 @@ public class GameManager extends FragmentActivity
     }
 
     private void incomingDataPoints(String inputString) {   // method to deal with received data
+        boolean moveOn = false;
          switch (inputString) {
              case "R": // Disc is checking if connection is ready
                  sendMessage(inputString);
@@ -765,6 +761,7 @@ public class GameManager extends FragmentActivity
 //                 break;
              default:       // Receiving GPS points
                  if (findingDisc) {
+
 //                     trajectoryLine.setVisible(false);    // temporarily hide plotted trajectory
                      String[] result = inputString.split(",");
                      int mLength = result.length;
@@ -800,7 +797,8 @@ public class GameManager extends FragmentActivity
                              // Check if EOH was also received
                              if (result[mLength - 2].equals("EOH")) {
                                  Log.d(TAG, "Received EOH signal");
-                                 nextBasket(); // Update values in TextViews
+//                                 nextBasket(); // Update values in TextViews
+                                 moveOn = true;
                                  doubleSize = mLength - 3;  // Ignore the last 2 of original message (EOH and E)
                              }
 
@@ -824,6 +822,8 @@ public class GameManager extends FragmentActivity
                                  totalStrokeCount++;
                                  totalGameStrokes.setText(String.valueOf(totalStrokeCount));
                                  currenBasketStrokes.setText(String.valueOf(currentStroke));
+                                 if (moveOn)
+                                     nextBasket();
                                  Log.d(TAG, "Adding new points");
                              } else {
                                  Log.d(TAG, "Received duplicate points.");
@@ -858,7 +858,8 @@ public class GameManager extends FragmentActivity
                              // Check to see if EOH signal was received
                              if (appendedResults[mLength - 2].equals("EOH")) {
                                  Log.d(TAG, "Received EOH signal");
-                                 nextBasket();
+//                                 nextBasket();
+                                 moveOn = true;
                                  doubleSize = mLength - 3;
                              }
 
@@ -880,6 +881,8 @@ public class GameManager extends FragmentActivity
                                  lastGPS = GPSinput[0];
                                  currentStroke++;
                                  totalStrokeCount++;
+                                 if (moveOn)
+                                     nextBasket();
                                  Log.d(TAG, "Adding new points");
                              } else {
                                  Log.d(TAG, "Received duplicate points.");
@@ -1063,24 +1066,32 @@ public class GameManager extends FragmentActivity
         View promptView = layoutInflater.inflate(R.layout.change_score_prompt_dialog, null);
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 
-        NumberPicker.OnValueChangeListener basketValueChanged = new NumberPicker.OnValueChangeListener() {
-            @Override
-            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                picker.setValue(currentGame.getHoleStroke(newVal - 1));
-            }
-        };
-
         final NumberPicker basketNP = (NumberPicker) promptView.findViewById(R.id.basketNumberPicker);
+        final NumberPicker strokeNP = (NumberPicker) promptView.findViewById(R.id.strokeNumberPicker);
+
         if (currentBasket > 0) {
-            basketNP.setMaxValue(currentBasket + 1);
+            basketNP.setMaxValue(currentBasket);
             basketNP.setMinValue(1);
+//            basketNP.setWrapSelectorWheel(false);
 //            basketNP.setValue(1);
 
-            final NumberPicker strokeNP = (NumberPicker) promptView.findViewById(R.id.strokeNumberPicker);
+//            String[] nums = new String[11];
+//            for(int i=0; i<nums.length; i++)
+//                nums[i] = Integer.toString(i);
+
+//            NumberPicker.OnValueChangeListener basketValueChanged = new NumberPicker.OnValueChangeListener() {
+//                @Override
+//                public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+//                    picker.setValue(currentGame.getHoleStroke(newVal - 1));
+//                }
+//            };
+
             strokeNP.setMaxValue(10);
-//            strokeNP.setMinValue(0);
+            strokeNP.setMinValue(0);
+//            strokeNP.setDisplayedValues(nums);
+//            strokeNP.setWrapSelectorWheel(false);
 //            strokeNP.setValue(currentGame.getHoleStroke(0));
-            strokeNP.setOnValueChangedListener(basketValueChanged);
+//            strokeNP.setOnValueChangedListener(basketValueChanged);
 
             // set title
             alertDialogBuilder.setTitle("Update User Score");
@@ -1100,7 +1111,7 @@ public class GameManager extends FragmentActivity
                     int strokeNum = strokeNP.getValue();
                     currentGame.setHoleStroke(basketNum, strokeNum);
                     updateTotalStrokes();
-                    Toast.makeText(getParent(), "Score updated!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "Score updated!", Toast.LENGTH_SHORT).show();
                 }
             });
             alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -1132,6 +1143,7 @@ public class GameManager extends FragmentActivity
             totalStrokeCount += currentGame.getHoleStroke(i);
         }
         totalGameStrokes.setText(String.valueOf(totalStrokeCount));
+        currentGame.setTotalStrokes(totalStrokeCount);
     }
 
     private enum DynamoDBManagerType {

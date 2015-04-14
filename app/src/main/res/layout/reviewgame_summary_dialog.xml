@@ -157,12 +157,19 @@
             android:layout_height="202dp"
             android:layout_gravity="center_horizontal" />
 
-        <ListView
-            android:id="@+id/holeSummaryList"
-            android:layout_width="fill_parent"
-            android:layout_height="0dp"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="0.99" />
+        <ScrollView
+            android:id="@+id/scrollView2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/holeSummaryTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hole Summary"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+        </ScrollView>
+
     </LinearLayout>
 
 </LinearLayout>

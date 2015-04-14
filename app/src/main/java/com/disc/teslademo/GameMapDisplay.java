@@ -81,7 +81,7 @@ public class GameMapDisplay extends FragmentActivity
 
         value.append("Basket Hole Count: \n");
         for (int i = 0; i < game.getHoleStrokes().size(); i++) {
-            value.append("Hole #" + i + 1 + ": " + game.getHoleStroke(i));
+            value.append("Hole #" + (i + 1) + ": " + game.getHoleStroke(i));
             value.append(System.getProperty("line.separator"));
         }
 
