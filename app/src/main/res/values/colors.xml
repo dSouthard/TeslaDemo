@@ -5,4 +5,9 @@
     <color name="bg_gradient_start">#EB5038</color>
     <color name="bg_gradient_end">#CA3822</color>
     <color name="bg_button_login">#A92815</color>
+
+    <color name="bg_grey">#F3F3F4</color>
+    <color name="upper_banner">#BDBEC1</color>
+    <color name="font_color">#58585A</color>
+    <color name="midGrey">#D2D3D5</color>
 </resources>

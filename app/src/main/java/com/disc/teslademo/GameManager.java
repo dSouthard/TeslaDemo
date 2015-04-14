@@ -193,6 +193,7 @@ public class GameManager extends FragmentActivity
      @Override
      public void onCreate(Bundle savedInstanceState) {
          super.onCreate(savedInstanceState);
+//         setContentView(R.layout.activity_temp);
          setContentView(R.layout.activity_game_manager);
 
          // Setup Text Views
@@ -638,7 +639,7 @@ public class GameManager extends FragmentActivity
                      .position(new LatLng(course.getABasketLatitude(i), course.getABasketLongitude(i))));
 
              IconGenerator tc = new IconGenerator(this);
-             tc.setColor(Color.GREEN);
+             tc.setColor(Color.RED);
              Bitmap bmp = tc.makeIcon(String.valueOf(i + 1));
              gameMap.getMap().addMarker(new MarkerOptions()
                      .icon(BitmapDescriptorFactory.fromBitmap(bmp)) // tee-pad with number
@@ -731,12 +732,13 @@ public class GameManager extends FragmentActivity
             discLineOptions.color(Color.BLUE); // Setting the color of the polyline
             discLineOptions.width(7); // Setting the width of the polyline
             discLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
-            if (discMarker != null)
+            if (discMarker != null) {
                 discLineOptions.add(discMarker);
-            else
-                discLineOptions.add(new LatLng(course.getATpadLatitude(17), course.getATpadLongitude(17)));
-            discTracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
-            discTracker.setVisible(true);
+                discTracker = gameMap.getMap().addPolyline(discLineOptions);
+                discTracker.setVisible(true);
+            } else {
+                Toast.makeText(this, "Waiting for Disc GPS Data to find disc", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -1017,12 +1019,13 @@ public class GameManager extends FragmentActivity
                  discLineOptions.color(Color.BLUE); // Setting the color of the polyline
                  discLineOptions.width(7); // Setting the width of the polyline
                  discLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
-//                 if (discMarker != null)
-//                     discLineOptions.add(discMarker);
-//                 else
-                 discLineOptions.add(new LatLng(course.getATpadLatitude(17), course.getATpadLongitude(17)));
-                 discTracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
-                 discTracker.setVisible(true);
+                 if (discMarker != null) {
+                     discLineOptions.add(discMarker);
+                     discTracker = gameMap.getMap().addPolyline(discLineOptions);
+                     discTracker.setVisible(true);
+                 } else {
+                     Toast.makeText(this, "Waiting for Disc GPS Data to find disc", Toast.LENGTH_SHORT).show();
+                 }
                  return true;
              case R.id.nightMode:
                  ToggleNightMode();
