@@ -79,7 +79,6 @@ public class GameManager extends FragmentActivity
      // Map Variables
      protected GoogleApiClient mGoogleApiClient;
      ArrayList<LatLng> points = new ArrayList<>();
-     TrajectoryPlotter trajectory = new TrajectoryPlotter();
      LocationManager manager;
     List<Double> plotPoints = new ArrayList<>();
      MapperPlayedGame currentGame;
@@ -302,8 +301,17 @@ public class GameManager extends FragmentActivity
              public void onClick(View v) {
                  Log.d(TAG, "directionsBttn pressed");
 //                 trajectoryLine.setVisible(true);     // turn
-                 nextTeePadLineOptions.visible(false);  // hide button
-                 tracking = false;  // don't update polyline anymore
+                 if (tracking) {
+                     nextTeePadLineOptions.visible(false);  // hide button
+                     tracking = false;  // don't update polyline anymore
+                     tracker.remove();
+                 }
+
+                 if (findingDisc) {
+                     discTracker.remove();
+                     findingDisc = false;
+                 }
+                 nextBasketBttn.setVisibility(View.INVISIBLE);
              }
          });
 
@@ -733,6 +741,7 @@ public class GameManager extends FragmentActivity
     private void InitiateFindMyDisc() {
         findingDisc = true;
         sendMessage("F");
+        directionsBttn.setVisibility(View.VISIBLE);
     }
 
     private void ToggleNightMode() {
@@ -751,11 +760,11 @@ public class GameManager extends FragmentActivity
              case "R": // Disc is checking if connection is ready
                  sendMessage(inputString);
                  break;
-             case "F": //    Disc was in Find My Disc mode
-                 if (discMarker != null)
-                     discMarker.remove();   // remove disc marker
-//                 trajectoryLine.setVisible(true); // replace plotted trajectory
-                 break;
+//             case "F": //    Disc was in Find My Disc mode
+//                 if (discMarker != null)
+//                     discMarker.remove();   // remove disc marker
+////                 trajectoryLine.setVisible(true); // replace plotted trajectory
+//                 break;
              default:       // Receiving GPS points
                  if (findingDisc) {
 //                     trajectoryLine.setVisible(false);    // temporarily hide plotted trajectory
@@ -899,6 +908,9 @@ public class GameManager extends FragmentActivity
 
          // Initialize constants and flight data
          //        GPSinput = trajectory.filter(GPSinput);
+
+         TrajectoryPlotter trajectory = new TrajectoryPlotter();
+
          trajectory.initData(GPSinput);
          points = trajectory.mapTrajectory();
 
@@ -1014,8 +1026,8 @@ public class GameManager extends FragmentActivity
                      tracker.setVisible(false);
                  } else {
                      directionsBttn.setVisibility(View.VISIBLE);
-                     nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
-                     nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
+//                     nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+//                     nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
                      tracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
                      tracking = true;
                  }
@@ -1041,44 +1053,55 @@ public class GameManager extends FragmentActivity
             }
         };
 
-        final NumberPicker basketNP = (NumberPicker) findViewById(R.id.basketNumberPicker);
-        basketNP.setMaxValue(currentBasket + 1);
-        basketNP.setMinValue(1);
-        basketNP.setValue(1);
+        final NumberPicker basketNP = (NumberPicker) promptView.findViewById(R.id.basketNumberPicker);
+        if (currentBasket > 0) {
+            basketNP.setMaxValue(currentBasket + 1);
+            basketNP.setMinValue(1);
+//            basketNP.setValue(1);
 
-        final NumberPicker strokeNP = (NumberPicker) findViewById(R.id.strokeNumberPicker);
-        strokeNP.setMaxValue(MAX_STROKE_COUNT);
-        strokeNP.setMinValue(MIN_STROKE_COUNT);
-        strokeNP.setValue(currentGame.getHoleStroke(0));
-        strokeNP.setOnValueChangedListener(basketValueChanged);
+            final NumberPicker strokeNP = (NumberPicker) promptView.findViewById(R.id.strokeNumberPicker);
+            strokeNP.setMaxValue(10);
+//            strokeNP.setMinValue(0);
+//            strokeNP.setValue(currentGame.getHoleStroke(0));
+            strokeNP.setOnValueChangedListener(basketValueChanged);
 
-        // set title
-        alertDialogBuilder.setTitle("Update User Score");
+            // set title
+            alertDialogBuilder.setTitle("Update User Score");
 
-        // set prompts.xml to be the layout file of the alertdialog builder
-        alertDialogBuilder.setView(promptView);
+            // set prompts.xml to be the layout file of the alertdialog builder
+            alertDialogBuilder.setView(promptView);
 
-        // set dialog message
-        alertDialogBuilder.setMessage("Do you want to change your score?");
-        alertDialogBuilder.setCancelable(false);
-        alertDialogBuilder.setPositiveButton("Change Score", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                //  get user input and set it to result
-                NumberPicker basketNPP = (NumberPicker) findViewById(R.id.basketNumberPicker);
-                NumberPicker strokeNPP = (NumberPicker) findViewById(R.id.strokeNumberPicker);
-                int basketNum = basketNP.getValue() - 1;
-                int strokeNum = strokeNP.getValue();
-                currentGame.setHoleStroke(basketNum, strokeNum);
-                updateTotalStrokes();
-                Toast.makeText(getParent(), "Score updated!", Toast.LENGTH_SHORT).show();
-            }
-        });
-        alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // if this button is clicked, just close the dialog box and do nothing
-                dialog.cancel();
-            }
-        });
+            // set dialog message
+            alertDialogBuilder.setMessage("Do you want to change your score?");
+            alertDialogBuilder.setCancelable(false);
+            alertDialogBuilder.setPositiveButton("Change Score", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    //  get user input and set it to result
+                    NumberPicker basketNPP = (NumberPicker) findViewById(R.id.basketNumberPicker);
+                    NumberPicker strokeNPP = (NumberPicker) findViewById(R.id.strokeNumberPicker);
+                    int basketNum = basketNP.getValue() - 1;
+                    int strokeNum = strokeNP.getValue();
+                    currentGame.setHoleStroke(basketNum, strokeNum);
+                    updateTotalStrokes();
+                    Toast.makeText(getParent(), "Score updated!", Toast.LENGTH_SHORT).show();
+                }
+            });
+            alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // if this button is clicked, just close the dialog box and do nothing
+                    dialog.cancel();
+                }
+            });
+        } else {
+            alertDialogBuilder.setTitle("No Score to Update");
+            alertDialogBuilder.setMessage("There are not yet any scores to update.");
+            alertDialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // if this button is clicked, just close the dialog box and do nothing
+                    dialog.cancel();
+                }
+            });
+        }
         // create alert dialog
         AlertDialog alertDialog = alertDialogBuilder.create();
 
