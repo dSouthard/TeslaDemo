@@ -59,7 +59,7 @@
             android:orientation="vertical">
 
             <ImageView
-                android:id="@+id/imageView"
+                android:id="@+id/startNewGameImage"
                 android:layout_width="89dp"
                 android:layout_height="61dp"
                 android:layout_gravity="center_horizontal"

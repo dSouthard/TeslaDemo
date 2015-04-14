@@ -96,15 +96,21 @@ public class NewsFeedFragment extends Fragment {
             }
         });
 
-        final Button startNewGameBttn = (Button) view.findViewById(R.id.newGameButton);
-        startNewGameBttn.setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener newGameClickListner = new View.OnClickListener() {
 
             public void onClick(View v) {
                 Log.i(TAG, "startNewGameBttn clicked.");
                 Intent intent = new Intent(getActivity(), GameManager.class);
                 startActivityForResult(intent, NEWGAME);
             }
-        });
+        };
+
+        final Button startNewGameBttn = (Button) view.findViewById(R.id.newGameButton);
+        startNewGameBttn.setOnClickListener(newGameClickListner);
+
+        ImageView startGameImage = (ImageView) view.findViewById(R.id.startNewGameImage);
+        startGameImage.setClickable(true);
+        startGameImage.setOnClickListener(newGameClickListner);
 
         Button userProfile = (Button) view.findViewById(R.id.userProfile);
         userProfile.setOnClickListener(new View.OnClickListener() {
