@@ -24,13 +24,14 @@ public class GameMapDisplay extends FragmentActivity
         implements OnMapReadyCallback {
 
     private static String TAG = "Map Fragment Activity";
+    MapFragment gameMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map_fragment);
 
-        MapFragment gameMap = (MapFragment) getFragmentManager().findFragmentById(R.id.gameMap);
+        gameMap = (MapFragment) getFragmentManager().findFragmentById(R.id.newsfeedMap);
         gameMap.getMapAsync(this);
 
         String summary;
@@ -104,7 +105,9 @@ public class GameMapDisplay extends FragmentActivity
 
         // Move camera to current phone location
         if (NewsFeedFragment.mapThisGame != null) {
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(NewsFeedFragment.mapThisGame.getPlotPoint(0), NewsFeedFragment.mapThisGame.getPlotPoint(1)), 18f));
+            if (!NewsFeedFragment.mapThisGame.getPlotPoints().isEmpty())
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(NewsFeedFragment.mapThisGame.getPlotPoint(0), NewsFeedFragment.mapThisGame.getPlotPoint(1)), 16f));
+            map.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
 
             TrajectoryPlotter trajectoryPlotter = new TrajectoryPlotter();
 

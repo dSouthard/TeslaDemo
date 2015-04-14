@@ -4,12 +4,14 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -76,6 +78,21 @@ public class UserProfileActivity extends Activity {
         profileWallFeed.setAdapter(listAdapter);
         listAdapter.notifyDataSetChanged();
 
+        profileWallFeed.setClickable(true);
+        profileWallFeed.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+            @Override
+            public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
+//                String o = (String) profileWallFeed.getItemAtPosition(position);
+//                Toast.makeText(getParent(), o, Toast.LENGTH_SHORT).show();
+
+                NewsFeedFragment.mapThisGame = NewsFeedFragment.listOfUserOnlyGames.get(position);
+                Intent intent = new Intent(getBaseContext(), GameMapDisplay.class);
+
+                startActivity(intent);
+            }
+        });
+
         // Set up button listeners
         // friendsListButton
 
@@ -125,6 +142,17 @@ public class UserProfileActivity extends Activity {
 
                 // show it
                 alertDialog.show();
+            }
+
+        });
+
+        // Update Name Button
+        Button returnToNewsfeedBttn = (Button) findViewById(R.id.profileReturnBttn);
+        returnToNewsfeedBttn.setOnClickListener(new View.OnClickListener() {
+
+            public void onClick(View v) {
+                Log.i(TAG, "returnToNewsfeedBttn clicked.");
+                finish();
             }
 
         });

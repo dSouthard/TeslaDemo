@@ -25,13 +25,13 @@
             android:layout_height="wrap_content"
             android:textSize="17sp" />
 
-        <TextView
-            android:id="@+id/pairedDeviceText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall" />
-
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/pairedDeviceText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
 
     <LinearLayout
         android:layout_width="fill_parent"

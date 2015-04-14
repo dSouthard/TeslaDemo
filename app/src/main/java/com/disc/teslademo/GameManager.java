@@ -43,7 +43,6 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -165,7 +164,7 @@ public class GameManager extends FragmentActivity
     private PolylineOptions nextTeePadLineOptions;
     private boolean tracking = false;
     private int currentPar = 0, currentStroke = 0, totalStrokeCount = 0, totalHoles;
-    private Marker discMarker;
+    private LatLng discMarker;
     private Button directionsBttn, exitGameBttn, nextBasketBttn;
 
      /**
@@ -327,15 +326,15 @@ public class GameManager extends FragmentActivity
 
         Intent intent = new Intent();
         // All other saved info should be up to date, ready to push to server
-        if (!plotPoints.isEmpty()) {    // Stop saving empty games
+//        if (!plotPoints.isEmpty()) {    // Stop saving empty games
             saveGameData();     // Save game data
             MainActivity.currentUser.addPlayedGame(currentGame.getgameId());
             saveUser();         // Save new game reference in user data
             setResult(RESULT_OK, intent);   // Let newsfeed know to reload wallfeed
-        } else {
-            Toast.makeText(this, "No disc flights recorded, game will not be saved.", Toast.LENGTH_SHORT).show();
-            setResult(RESULT_CANCELED, intent);
-        }
+//        } else {
+//            Toast.makeText(this, "No disc flights recorded, game will not be saved.", Toast.LENGTH_SHORT).show();
+//            setResult(RESULT_CANCELED, intent);
+//        }
 
         finish();
     }
@@ -369,7 +368,7 @@ public class GameManager extends FragmentActivity
     }
 
     private void nextBasket() {
-        Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "Moving on to the next basket", Toast.LENGTH_SHORT).show();
         currentGame.addHoleStroke(currentBasket, currentStroke);  // save stroke count for basket
         currentStroke = 0;                                        // reset stroke count for next hole
 
@@ -639,7 +638,7 @@ public class GameManager extends FragmentActivity
                      .position(new LatLng(course.getABasketLatitude(i), course.getABasketLongitude(i))));
 
              IconGenerator tc = new IconGenerator(this);
-             tc.setColor(Color.RED);
+             tc.setColor(Color.GREEN);
              Bitmap bmp = tc.makeIcon(String.valueOf(i + 1));
              gameMap.getMap().addMarker(new MarkerOptions()
                      .icon(BitmapDescriptorFactory.fromBitmap(bmp)) // tee-pad with number
@@ -732,16 +731,13 @@ public class GameManager extends FragmentActivity
             discLineOptions.color(Color.BLUE); // Setting the color of the polyline
             discLineOptions.width(7); // Setting the width of the polyline
             discLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
-            discLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
+            if (discMarker != null)
+                discLineOptions.add(discMarker);
+            else
+                discLineOptions.add(new LatLng(course.getATpadLatitude(17), course.getATpadLongitude(17)));
             discTracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
             discTracker.setVisible(true);
         }
-    }
-
-    private void InitiateFindMyDisc() {
-        findingDisc = true;
-        sendMessage("F");
-        directionsBttn.setVisibility(View.VISIBLE);
     }
 
     private void ToggleNightMode() {
@@ -782,10 +778,8 @@ public class GameManager extends FragmentActivity
                          }
                      }
 
-                     discMarker = gameMap.getMap().addMarker(new MarkerOptions()
-                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.disc)) // basket
-                             .anchor(0.0f, 1.0f) // Anchors the marker on the bottom left
-                             .position(new LatLng(GPSinput[0], GPSinput[1])));
+                     discMarker = new LatLng(GPSinput[0], GPSinput[1]);
+
                  } else {
                      String[] result = inputString.split(",");
                      int mLength = result.length;
@@ -972,15 +966,16 @@ public class GameManager extends FragmentActivity
              mMenuItemConnect = menu.getItem(0);
              MenuItem updateBasket = menu.getItem(1);
              updateTeepad = menu.getItem(2);
-             findMyDisc = menu.getItem(3);
-             nightMode = menu.getItem(4);
+             MenuItem updateScore = menu.getItem(3);
+             findMyDisc = menu.getItem(4);
+             nightMode = menu.getItem(5);
              if (inNightMode) {
                  nightMode.setTitle("Turn Off Night Mode");
              } else {
                  nightMode.setTitle("Turn On Night Mode");
              }
-             teepadDirections = menu.getItem(5);
-             exitGame = menu.getItem(6);
+             teepadDirections = menu.getItem(6);
+             exitGame = menu.getItem(7);
          }
          return true;
      }
@@ -1014,7 +1009,20 @@ public class GameManager extends FragmentActivity
                  exitGameEarlyDialog();
                  return true;
              case R.id.findMyDisc:
-                 InitiateFindMyDisc();
+                 findingDisc = true;
+                 sendMessage("F");
+                 directionsBttn.setVisibility(View.VISIBLE);
+
+                 PolylineOptions discLineOptions = new PolylineOptions();
+                 discLineOptions.color(Color.BLUE); // Setting the color of the polyline
+                 discLineOptions.width(7); // Setting the width of the polyline
+                 discLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+//                 if (discMarker != null)
+//                     discLineOptions.add(discMarker);
+//                 else
+                 discLineOptions.add(new LatLng(course.getATpadLatitude(17), course.getATpadLongitude(17)));
+                 discTracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
+                 discTracker.setVisible(true);
                  return true;
              case R.id.nightMode:
                  ToggleNightMode();
@@ -1028,7 +1036,13 @@ public class GameManager extends FragmentActivity
                      directionsBttn.setVisibility(View.VISIBLE);
 //                     nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
 //                     nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
+                     nextTeePadLineOptions = new PolylineOptions();
+                     nextTeePadLineOptions.color(Color.BLUE); // Setting the color of the polyline
+                     nextTeePadLineOptions.width(7); // Setting the width of the polyline
+                     nextTeePadLineOptions.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                     nextTeePadLineOptions.add(new LatLng(course.getATpadLatitude(currentBasket), course.getATpadLongitude(currentBasket)));
                      tracker = gameMap.getMap().addPolyline(nextTeePadLineOptions);
+                     tracker.setVisible(true);
                      tracking = true;
                  }
                  return true;

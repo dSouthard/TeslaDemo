@@ -56,12 +56,28 @@
                 android:contentDescription="Link to Friends List"
                 android:src="@drawable/add_friends" />
 
-            <Button
-                android:id="@+id/updateNameButton"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Update Name" />
+                android:layout_weight="0.23"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/updateNameButton"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Update Name" />
+
+                <Button
+                    android:id="@+id/profileReturnBttn"
+                    style="?android:attr/buttonStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:layout_weight="0.23"
+                    android:text="Return to NewsFeed" />
+            </LinearLayout>
 
         </LinearLayout>
 

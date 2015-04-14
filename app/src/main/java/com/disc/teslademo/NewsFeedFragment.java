@@ -15,7 +15,6 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
@@ -74,6 +73,8 @@ public class NewsFeedFragment extends Fragment {
         }
 
         wallList = new ArrayList<>();
+        listOfGames = new ArrayList<>();
+        listOfUserOnlyGames = new ArrayList<>();
         listAdapter = new ArrayAdapter<>(getActivity(), R.layout.friend_name, wallList);
         wallFeed.setAdapter(listAdapter);
 
@@ -85,8 +86,8 @@ public class NewsFeedFragment extends Fragment {
 
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
-                String o = (String) wallFeed.getItemAtPosition(position);
-                Toast.makeText(getActivity(), o, Toast.LENGTH_SHORT).show();
+//                String o = (String) wallFeed.getItemAtPosition(position);
+//                Toast.makeText(getActivity(), o, Toast.LENGTH_SHORT).show();
 
                 mapThisGame = listOfGames.get(position);
                 Intent intent = new Intent(getActivity(), GameMapDisplay.class);
@@ -125,8 +126,6 @@ public class NewsFeedFragment extends Fragment {
 
         });
 
-        listOfGames = new ArrayList<>();
-        listOfUserOnlyGames = new ArrayList<>();
 
         Log.d(TAG, "Return View");
         return view;
@@ -285,11 +284,11 @@ public class NewsFeedFragment extends Fragment {
         if (requestCode == NEWGAME && resultCode == Activity.RESULT_OK) {
             Log.d(TAG, "New game was saved, reload wallfeed");
             ((MainActivity) getActivity()).loadUser();   // Reload user
-            try {
-                wait(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                wait(500);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             updateWallFeed();
         }
     }//onActivityResult
