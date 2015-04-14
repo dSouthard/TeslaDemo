@@ -26,6 +26,10 @@
         android:icon="@android:drawable/ic_menu_info_details"
         android:title="Update Current Tee-pad" />
     <item
+        android:id="@+id/updateCurrentScore"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="Update Current Score" />
+    <item
         android:id="@+id/findMyDisc"
         android:icon="@android:drawable/ic_menu_save"
         android:title="Find My Disc" />

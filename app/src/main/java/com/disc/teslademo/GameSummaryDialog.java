@@ -2,10 +2,10 @@ package com.disc.teslademo;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -14,8 +14,8 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.PolylineOptions;
 
@@ -27,7 +27,7 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
     public static boolean visible = true;
     ArrayAdapter<String> listAdapter;
     private Context context;
-    private SupportMapFragment gameMap;
+    private MapFragment gameMap;
     private PolylineOptions polylineOptions;
     private String courseName;
     private int totalStrokes, totalHoles;
@@ -144,11 +144,21 @@ public class GameSummaryDialog extends DialogFragment implements OnMapReadyCallb
         });
 
         // Setup map
-        gameMap = (SupportMapFragment) getFragmentManager().findFragmentById(R.id.dialogMapFragment);
+        gameMap = (MapFragment) getFragmentManager().findFragmentById(R.id.dialogMapFragment);
 //        gameMap = (MapFragment) mapSupport;
         gameMap.getMapAsync(this);
         gameMap.getMap().addPolyline(polylineOptions);
 
         return v;
     }
+
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+//        SupportMapFragment mapFrag = (SupportMapFragment) getFragmentManager().findFragmentById(R.id.dialogMapFragment);
+        if (gameMap != null)
+            getFragmentManager().beginTransaction().remove(gameMap).commit();
+    }
+
 }

@@ -35,4 +35,6 @@ dependencies {
     compile 'com.android.support:appcompat-v7:21.0.3'
     compile files('libs/EJML-core-0.26.jar')
     compile files('libs/aws-android-sdk-2.1.8-s3.debug.jar')
+    compile 'com.google.maps.android:android-maps-utils:0.3+'
+
 }

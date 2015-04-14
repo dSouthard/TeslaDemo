@@ -1,5 +1,6 @@
 package com.disc.teslademo;
 
+import android.app.DialogFragment;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,28 +35,17 @@ import com.facebook.model.GraphUser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Set;
 
 public class MainActivity extends FragmentActivity
         implements LoginFragment.OnFragmentInteractionListener {
 
     public static final int LOGIN = 0, NEWSFEED = 1, SETTINGS = 2;
     /* TODO:
-        - Figure out how to save a screenshot of the map at the right zoom level
-        - save images to S3 buckets
-        - create scrollable view of user's/friends' activity, sorted by game data
         - create option to like friends' posts
         - create option to leave message on friends' posts???????
-        - repeat scrollable list of user's activity on user profile page
         - create user profile fragment with:
-            - user name
-            - user profile pic
-            - recent activity
-            - option to change display name
             - link to list of current friends
                 - opens up new list of friends
                 - shows list of other users not designated as friends, w/ option to add
@@ -71,9 +61,11 @@ public class MainActivity extends FragmentActivity
     public static ArrayList<MapperUser> userSearchResults;
     public static ArrayList<MapperPlayedGame> playedGamesSearchResults;
     public static Bitmap bitmap;
+    public static URL image_path;
+    public static Bitmap myBitmap;
+    public static DialogFragment resultDialog;
     static String currentUserName;
     private static NewsFeedFragment newsFeedFragment;
-    private LoginFragment loginFragment;
     // ArrayAdapters to keep track of sorted games
     private ArrayAdapter<String> userGames;
     private ArrayAdapter<String> friendGames;
@@ -81,30 +73,14 @@ public class MainActivity extends FragmentActivity
     private MenuItem settings;  // use this to trigger the UserSettingsFragment display
     // User Profile Variables
     private String currentUserId;
-    private URL image_path;
     private boolean isResumed = false, loggedIn = false;
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
         @Override
         public void call(Session session, SessionState state, Exception exception) {
-            onSessionStateChange(session, state, exception);
+            onSessionStateChange(session, state);
         }
     };
-
-    public static Bitmap getBitmapFromURL(String src) {
-        try {
-            URL url = new URL(src);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            Bitmap myBitmap = BitmapFactory.decodeStream(input);
-            return myBitmap;
-        } catch (IOException e) {
-            // Log exception
-            return null;
-        }
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -124,19 +100,19 @@ public class MainActivity extends FragmentActivity
         setContentView(R.layout.main);
 
         // Initialize array adapters for game sorting
-        userGames = new ArrayAdapter<String>(this, R.layout.friend_name);
-        friendGames = new ArrayAdapter<String>(this, R.layout.friend_name);
-        otherUserGames = new ArrayAdapter<String>(this, R.layout.friend_name);
+        userGames = new ArrayAdapter<>(this, R.layout.friend_name);
+        friendGames = new ArrayAdapter<>(this, R.layout.friend_name);
+        otherUserGames = new ArrayAdapter<>(this, R.layout.friend_name);
 
         bitmap = null;
         currentUser = new MapperUser();
         loadUser();
-        getGames();
-        sortGames();
+//        getGames();
+//        sortGames();
 
         // Set up fragments
         FragmentManager fm = getSupportFragmentManager();
-        loginFragment = (LoginFragment) fm.findFragmentById(R.id.loginFragment);
+        LoginFragment loginFragment = (LoginFragment) fm.findFragmentById(R.id.loginFragment);
         newsFeedFragment = (NewsFeedFragment) fm.findFragmentById(R.id.newsfeedFragment);
 
         newsFeedFragment.updateWallFeed();
@@ -157,10 +133,6 @@ public class MainActivity extends FragmentActivity
         new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_USER);
     }
 
-    public void saveUser() {
-        new DynamoDBManagerTask().execute(DynamoDBManagerType.SAVE_USER);
-    }
-
     public void getGames() {
         new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_GAMES);
     }
@@ -171,7 +143,7 @@ public class MainActivity extends FragmentActivity
         Session session = Session.getActiveSession();
         if (session != null &&
                 (session.isOpened() || session.isClosed())) {
-            onSessionStateChange(session, session.getState(), null);
+            onSessionStateChange(session, session.getState());
         }
         uiHelper.onResume();
 
@@ -228,41 +200,51 @@ public class MainActivity extends FragmentActivity
         }
     }
 
-    private void sortGames() {
-
-        // Clear out previous text
-        userGames.clear();
-        friendGames.clear();
-
-        // Iterate through masterList and sort all users into correct arraylist
-        if (playedGamesSearchResults != null) {
-            for (Iterator<MapperPlayedGame> it = playedGamesSearchResults.iterator(); it.hasNext(); ) {
-                MapperPlayedGame temp = it.next();
-
-                // Check if game was played by current user
-                if (currentUser.getPlayedGames().contains(temp.getgameId())) {
-                    // Current game was played by the user
-                    userGames.add(temp.getGameDate() + '\n'
-                            + temp.getGameLocation() + '\n'
-                            + temp.getTotalStrokes() + '\n');
-                }
-
-                // Check if game was played by friend
-                Set friendsTemp = currentUser.getFriends();
-                for (Iterator<MapperUser> friendTempIt = friendsTemp.iterator(); friendTempIt.hasNext(); ) {
-                    if (friendTempIt.next().getPlayedGames().contains(temp.getgameId())) {
-                        friendGames.add(friendTempIt.next().getUserName() + " Played a game at: "
-                                + temp.getGameLocation() + " on "
-                                + temp.getGameDate() + '\n'
-                                + " Total Strokes: " + temp.getTotalStrokes() + '\n');
-                    }
-                }
-            }
-        }
-    }
+//    private void sortGames() {
+//
+//        // Clear out previous text
+//        userGames.clear();
+//        friendGames.clear();
+//
+//        // Iterate through masterList and sort all users into correct arraylist
+////        if (playedGamesSearchResults != null) {
+////            for (MapperPlayedGame temp : playedGamesSearchResults) {
+////                // Check if game was played by current user
+////                // Current game was played by the user
+////                if (currentUser.getPlayedGames().contains(temp.getgameId()))
+////                    userGames.add(temp.getGameDate() + '\n'
+////                            + temp.getGameLocation() + '\n'
+////                            + temp.getTotalStrokes() + '\n');
+////
+////                // Check if game was played by friend
+////                Set friendsTemp = currentUser.getFriends();
+////                for (Iterator<MapperUser> friendTempIt = (Iterator<MapperUser>)friendsTemp.iterator(); friendTempIt.hasNext(); ) {
+////                    if (friendTempIt.next().getPlayedGames().contains(temp.getgameId()))
+////                        friendGames.add(friendTempIt.next().getUserName() + " Played a game at: "
+////                                + temp.getGameLocation() + " on "
+////                                + temp.getGameDate() + '\n'
+////                                + " Total Strokes: " + temp.getTotalStrokes() + '\n');
+////                }
+////            }
+////        }
+//    }
 
     public void showSettingsFragment() {
         showFragment(SETTINGS, true);
+    }
+
+    private void getBitmapFromURL(URL url) {
+        if (url != null) {
+            try {
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                myBitmap = BitmapFactory.decodeStream(input);
+            } catch (IOException e) {
+                // Log exception
+            }
+        }
     }
 
     @Override
@@ -273,7 +255,7 @@ public class MainActivity extends FragmentActivity
         }
     }
 
-    private void onSessionStateChange(Session session, SessionState state, Exception exception) {
+    private void onSessionStateChange(Session session, SessionState state) {
         if (isResumed) {
             FragmentManager manager = getSupportFragmentManager();
             int backStackSize = manager.getBackStackEntryCount();
@@ -292,10 +274,8 @@ public class MainActivity extends FragmentActivity
                             currentUserId = user.getId();
                             currentUserName = user.getFirstName() + " " + user.getLastName();
                             try {
-                                image_path = new URL("http://graph.facebook.com/" + currentUserId + "/picture?type=large");
+                                image_path = new URL("http://graph.facebook.com/" + currentUserId + "/picture?type=small");
                                 new DynamoDBManagerTask().execute(DynamoDBManagerType.GET_BITMAP);
-                            } catch (MalformedURLException e) {
-                                e.printStackTrace();
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -304,6 +284,7 @@ public class MainActivity extends FragmentActivity
                             Log.d(TAG, "User Name : " + user.getFirstName() + " " + user.getLastName());
                             loadUser(); // Set up user
                             while (currentUser.getUserName() == null) {
+                                // TODO: Add progress bar
                             }
                             newsFeedFragment.updateWallFeed();
                         }
@@ -407,6 +388,8 @@ public class MainActivity extends FragmentActivity
                                 }
                             }
 
+                            getBitmapFromURL(image_path);
+
                             // Check if user was loaded
                             if (currentUser.getUserName() == null) {
                                 Log.d(TAG, "User did not previously exist, adding current user to database....");
@@ -491,13 +474,15 @@ public class MainActivity extends FragmentActivity
                             Log.d(TAG, "Loading all saved games");
                             // Retrieve all games from saved User Table, returned in undetermined order
                             DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
-                            PaginatedScanList scanResult = mapper.scan(MapperUser.class, scanExpression);
+                            PaginatedScanList scanResult = (PaginatedScanList) mapper.scan(MapperUser.class, scanExpression);
                             playedGamesSearchResults = new ArrayList<>();
                             playedGamesSearchResults.addAll(scanResult);        // Change result to ArrayList
                             Log.d(TAG, "Retrieved all saved users");
                         } catch (AmazonServiceException ex) {
                             Log.e(TAG, "Error loading games");
                         }
+                        break;
+                    case GET_BITMAP:
                         break;
                 }
             }

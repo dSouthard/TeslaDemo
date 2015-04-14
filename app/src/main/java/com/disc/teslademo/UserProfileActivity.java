@@ -4,17 +4,18 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,24 +23,22 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
-import java.util.Iterator;
-import java.util.Set;
+import java.util.ArrayList;
 
 
 public class UserProfileActivity extends Activity {
 
     // Used for taking picture intents when changing user profile image
-    private static final int IMAGE_PICK = 1;
-    private static final int IMAGE_CAPTURE = 2;
     public static MapperUser currentUserCopy;
     private static String TAG = "UserProfileFragment";
     Context context;
     private ImageView userProfilePic;
     private ImageButton friendListButton;
     private Button updateNameButton;
-    private TextView userName, lastGamePlayed, recentActivity;
-    private Bitmap profileImage;
-    private boolean needToSave = false;
+    private TextView userName, lastGamePlayed;
+    private ListView profileWallFeed;
+    private ArrayAdapter<String> listAdapter;
+    private ArrayList<String> wallList;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -66,20 +65,16 @@ public class UserProfileActivity extends Activity {
         userName = (TextView) findViewById(R.id.userProfileName);
         userName.setText(MainActivity.currentUser.getUserName());
         lastGamePlayed = (TextView) findViewById(R.id.lastGamePlayed);
-        recentActivity = (TextView) findViewById(R.id.recentActivity);
 
-        Set<String> playedGames = null;
-        if (currentUserCopy != null)
-            playedGames = currentUserCopy.getPlayedGames();
-        if (playedGames == null || playedGames.isEmpty()) {
-            recentActivity.setText("No saved games for this profile");
-            lastGamePlayed.setText("No recent games");
-        } else {
-
-            for (Iterator<String> it = playedGames.iterator(); it.hasNext(); ) {
-
-            }
+        // Set up activity feed
+        wallList = new ArrayList<>();
+        for (int i = 0; i < NewsFeedFragment.listOfUserOnlyGames.size(); i++) {
+            wallList.add(makeGameSummary(NewsFeedFragment.listOfUserOnlyGames.get(i)));
         }
+        profileWallFeed = (ListView) findViewById(R.id.profileWallFeed);
+        listAdapter = new ArrayAdapter<>(this, R.layout.friend_name, wallList);
+        profileWallFeed.setAdapter(listAdapter);
+        listAdapter.notifyDataSetChanged();
 
         // Set up button listeners
         // friendsListButton
@@ -133,6 +128,21 @@ public class UserProfileActivity extends Activity {
             }
 
         });
+    }
+
+    private String makeGameSummary(MapperPlayedGame game) {
+        StringBuilder forWall = new StringBuilder();
+        // Get Game Summary
+        forWall.append("Game Played On " + game.getGameDate());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("At: " + game.getGameLocation());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("Total stroke count: " + game.getTotalStrokes());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append("Likes: " + game.getLikes());
+        forWall.append(System.getProperty("line.separator"));
+        forWall.append(System.getProperty("line.separator"));
+        return forWall.toString();
     }
 
     public void saveUser() {

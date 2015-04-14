@@ -16,7 +16,8 @@
             android:id="@+id/userProfileImageView"
             android:layout_width="128dp"
             android:layout_height="152dp"
-            android:layout_weight="0.26" />
+            android:layout_weight="0.26"
+            android:contentDescription="User Profile Picture" />
 
         <LinearLayout
             android:layout_width="222dp"
@@ -52,6 +53,7 @@
                 android:layout_height="52dp"
                 android:layout_gravity="center_horizontal"
                 android:clickable="true"
+                android:contentDescription="Link to Friends List"
                 android:src="@drawable/add_friends" />
 
             <Button
@@ -73,18 +75,9 @@
         android:text="Recent Activity"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
-    <ScrollView
-        android:id="@+id/scrollView"
+    <ListView
+        android:id="@+id/profileWallFeed"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
-
-        <TextView
-            android:id="@+id/recentActivity"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Recent Activity Field"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
-    </ScrollView>
+        android:layout_height="fill_parent" />
 
 </LinearLayout>

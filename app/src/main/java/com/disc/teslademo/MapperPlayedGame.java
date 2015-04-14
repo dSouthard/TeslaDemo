@@ -26,6 +26,8 @@ public class MapperPlayedGame {
     private List<Double> plotPoints;
     private int likes;
     private int totalHoles;
+    private int totalPars;
+    private String totalGameTime;
 
     @DynamoDBHashKey(attributeName = "GameID")
     public String getgameId() {
@@ -83,13 +85,22 @@ public class MapperPlayedGame {
             return false;
     }
 
-    public void changeHoleStroke(int holeStrokePosition, int newHoleStroke) {
+    public void setHoleStroke(int holeStrokePosition, int newHoleStroke) {
         if (holeStrokes == null) {
             holeStrokes = new ArrayList<>();
         }
         if (holeStrokes.isEmpty() || holeStrokes.size() < holeStrokePosition) return;
         holeStrokes.remove(holeStrokePosition);
         holeStrokes.add(holeStrokePosition, newHoleStroke);
+    }
+
+    public int getHoleStroke(int holeStrokePosition) {
+        if (holeStrokes == null) {
+            holeStrokes = new ArrayList<>();
+        }
+        if (holeStrokes.isEmpty() || holeStrokes.size() < holeStrokePosition) return 0;
+        return holeStrokes.get(holeStrokePosition);
+
     }
 
     @DynamoDBAttribute(attributeName = "GameLocation")
@@ -168,6 +179,24 @@ public class MapperPlayedGame {
 
     public void setTotalHoles(int newHoles) {
         totalHoles = newHoles;
+    }
+
+    @DynamoDBAttribute(attributeName = "TotalGameTime")
+    public String getTotalGameTime() {
+        return totalGameTime;
+    }
+
+    public void setTotalGameTime(String newTime) {
+        totalGameTime = newTime;
+    }
+
+    @DynamoDBAttribute(attributeName = "TotalPars")
+    public int getTotalPars() {
+        return totalPars;
+    }
+
+    public void setTotalPars(int newPars) {
+        totalPars = newPars;
     }
 
 }
